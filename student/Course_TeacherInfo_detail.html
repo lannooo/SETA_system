@@ -1,0 +1,271 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>软件工程课程论坛</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- font-awesome-4.7.0 CDN 地址-->
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $("#sendMessage").click(function(){
+                $('#leaveMessage').submit();
+                return false;
+            });
+        });
+    </script>
+    <script lang="javascript">
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+        function getCookie(name)
+        {
+            var arr,reg=new RegExp("(^| )"+name+"=([^;]*)(;|$)");
+            if(arr=document.cookie.match(reg))
+                return unescape(arr[2]);
+            else
+                return null;
+        }
+        var tid = getQueryString("tid");
+    </script>
+
+    <script>
+        $(document).ready(function(){
+            url='Course_TeacherInfo_detail.php';
+            var data={};
+            data.tid=tid;
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success:function(data){
+                    if(data.code == 2)
+                        alert(data.message);
+                    else if(data.code == 1)
+                        alert(data.message);
+                    else {
+                        $("#name").text(data.name);
+                        $("#gender").text(data.gender);
+                        $("#phone").text(data.phone);
+                        $("#mail").text(data.email);
+                        $("#college").text(data.college);
+                        $("#department").text(data.department);
+                        $("#position").text(data.position);
+                        $("#education").text(data.education);
+                        $("#direction").text(data.direction);
+                        $("#evaluation").text(data.past_evaluation);
+                        $("#achieve").text(data.desc_achieve);
+                        $("#teach_type").text(data.desc_teach_type);
+                        $("#publish").text(data.desc_publish);
+                        $("#honor").text(data.desc_honor);
+                        $("#more").text(data.desc_more);
+
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+            })
+        });
+    </script>
+</head>
+<body>
+<div class="container" id="div_bar">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                    </button>
+                    <a class="navbar-brand btn" onclick="goto_index()">首页<span class="glyphicon glyphicon-home"/></a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="../common/message_management/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                        <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                        <li><a href="../common/infoModify/student_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                        <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="modal fade" id="modal-container-365839" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                            <h4 class="modal-title" id="myModalLabel">
+                                请留下你的建议吧！
+                            </h4>
+                        </div>
+                        <div class="modal-body">
+                            <form id="leaveMessage" role="form" method="POST" action="leaveMessage.php">
+                                <div class="form-group">
+                                    <label for="message_text">留言内容</label>
+                                    <textarea name="message_text" id="message_text" class="form-control" rows="7" style="resize: none;overflow-y: visible;"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">邮箱</label>
+                                    <input class="form-control" type="email" name="email" id="email" placeholder="留下你的邮箱，方便我们联系你~">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button> <button type="button" class="btn btn-primary" id="sendMessage">保存</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br><br>
+    <div class="row clearfix">
+        <div class="page-header text-right"><h3>教师信息详细介绍&nbsp;&nbsp;&nbsp;</h3></div>
+        <div class="col-md-12 column">
+            <dl class="dl-horizontal text-default lead">
+                <dt>
+                    教师姓名
+                </dt>
+                <dd id="name">
+                </dd>
+                <dt>
+                    性别
+                </dt>
+                <dd id="gender">
+                    SRE                </dd>
+                <dt>
+                    教师手机号码
+                </dt>
+                <dd id="phone">
+                    21010211                </dd>
+                <dt>
+                    教师邮箱
+                </dt>
+                <dd id="mail">
+                    专业课                </dd>
+                <dt>
+                    学院
+                </dt>
+                <dd id="college">
+                    秋冬                </dd>
+                <dt>
+                    学部
+                </dt>
+                <dd id="department">
+                    《软件需求工程实践》                </dd>
+                <dt>
+                    职称
+                </dt>
+
+                <dd id="position">
+                    计算机学院                </dd>
+                <dt>
+                    学历
+                </dt>
+                <dd id="education">
+                    4.0                </dd>
+                <dt>
+                    科研方向
+                </dt>
+                <dd id="direction">
+                    5                </dd>
+                <dt>
+                    教师评价
+                </dt>
+                <dd id="evaluation">
+                    1.0-1.0                </dd>
+                <dt>
+                    科研成果
+                </dt>
+                <dd id="achieve">
+                    软件工程基础、C语言程序设计                </dd>
+                <dt>
+                    教学风格
+                </dt>
+                <dd id="teach_type">
+                    函数在一点连续的概念，间断点的分类，单侧连续性。连续函数的四则运算，复合函数的连续性。反函数的连续性（可不证）。初等函数的连续性。利用连续性计算极限。闭区间上连续函数的重要性质：有界性定理、介值定理和最大最小值定理（不证）                </dd>
+                <dt>
+                    出版书籍
+                </dt>
+                <dd id="publish">
+                    《微积分》是以函数为研究对象，运用极限手段（如无穷小与无穷逼近等极限过程），分析处理问题的一门数学学科，学时数为80学时。课程将采用讲授与讨论相结合的方法。                </dd>
+                <dt>
+                    所获荣誉
+                </dt>
+                <dd id="honor">
+                    教学内容有：函数极限与连续、一元函数的微分学、一元函数的积分学、无穷级数。                </dd>
+                <dt>
+                    更多
+                </dt>
+                <dd id="more">
+                    http://10.2nsun&courseWebsiteId=1ask了都塞一个了肯定就噶似的雾化器的好                </dd>
+            </dl>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

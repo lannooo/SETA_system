@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
+    <title></title>
+    <!--[if lt IE 9]>
+    <script src="http://apps.bdimg.com/libs/html5shiv/3.7/html5shiv.min.js"></script>
+    <![endif]-->
+    <link rel="shortcut icon" href="http://www.runoob.com/favicon.ico">
+
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../../js/jquery.json.js"></script>
+    <link href="../../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+    function checkMessage(mid,type){
+    var data={};
+    data.mid=mid;
+    data.type=type;
+    console.log(data);
+    url="display_message.php";
+    $.ajax({
+        type: 'post',
+        dataType: "json",
+        data: JSON.stringify(data),
+        url: url,
+        contentType : "application/text",
+        success: function (data) {
+            current_username = data.username;
+            current_usertype = data.tftype;
+            $("#msg-view-nam").text(data.name);
+            $("#msg-view-title").text(data.title);
+            $("#msg-view-content").text(data.content);
+        },
+        erro: function (data) {
+            alert("ajax传输失败！");
+        }
+    });
+    }
+
+    function displayList(type){
+            var data={};
+            data.type=type;
+            console.log(data);
+            var url="find_message.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: $.toJSON(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    var state="";
+                    var classType="";
+                    if(type=="send") {
+                        $("#sendTable").empty();
+
+                        for (i in data) {
+                            $("#sendTable").append("<tr "+classType+"><td>" + data[i].number +
+                                    "</td><td>" + data[i].name +
+                                    "</td><td>" + data[i].title +
+                                    "</td><td>" + data[i].date +
+                                    "</td><td>" + state +
+                                    "</td><td>" + "<a type=\"button\" class=\"btn\" "+'data-toggle="modal" href="#modal-container-view-message"'+"id=\"check_2_"+data[i].number+"\">查看</a>" + "<a type=\"button\" class=\"btn\" id=\"delete_2_"+data[i].number+"\">删除</a>" +
+                                    "</td><tr>");
+                            addSendEvent("check_2_"+data[i].number,data[i].mid);
+                            addDeleteEvent("delete_2_"+data[i].number,data[i].mid);
+                        }
+                    }
+                    else{
+                        $("#receiveTable").empty();
+                        for (i in data) {
+                            if(data[i].ifread==0){
+                                state="未读";
+                                classType="class=\"warning\"";
+                            }
+                            else{
+                                state="已读";
+                                classType="";
+                            }
+                            $("#receiveTable").append("<tr "+classType+"><td>" + data[i].number +
+                                    "</td><td>" + data[i].name +
+                                    "</td><td>" + data[i].title +
+                                    "</td><td>" + data[i].date +
+                                    "</td><td>" + state +
+                                    "</td><td>" + "<a type=\"button\" class=\"btn\" "+'data-toggle="modal" href="#modal-container-view-message"'+"id=\"check_1_"+data[i].number+"\">查看</a>" + "<a type=\"button\" class=\"btn\" id=\"delete_1_"+data[i].number+"\">删除</a>" +
+                                    "</td><tr>");
+                            addReceiveEvent("check_1_"+data[i].number,data[i].mid);
+                            addDeleteEvent("delete_1_"+data[i].number,data[i].mid);
+                        }
+                    }
+                },
+                erro: function (data) {
+                    alert("ajax传输失败！");
+                }
+
+            });
+
+        }
+
+        function refreshList() {
+            if (current_label == "send")
+                displayList("send");
+            else
+                displayList("receive");
+        }
+
+        function deleteMessage(mid){
+            var data={};
+            data.mid=mid;
+            console.log(data);
+            var url="delete_message.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: $.toJSON(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    // if(data.code==200) {
+                    //     alert("删除成功！");
+                    //     location.reload()
+                    // }
+                    // else{
+                    //     alert("删除失败！");
+                    // }
+                    refreshList();
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function addSendEvent(id,mid){
+            $("#"+id).on("click",function(){
+                var type="send";
+                checkMessage(mid,type);
+            });
+        }
+
+        function addReceiveEvent(id,mid){
+            $("#"+id).on("click",function(){
+                var type="receive";
+                checkMessage(mid,type);
+            });
+        }
+
+        function addDeleteEvent(id,mid) {
+            $("#"+id).on("click",function(){
+                deleteMessage(mid);
+            });
+        }
+        function msg_clear_btn() {
+            $("#touser").val("");
+            $("#msg-title").val("");
+            $("#msg-content").val("");
+        }
+
+        function msg_revert_btn() {
+            $("#touser").val("");
+            $("#msg-title").val("FWD:"+$("#msg-view-title").text());
+            $("#msg-content").val("转发私信："+$("#msg-view-content").text());
+            $("#checkname").text("");
+        }
+
+        function msg_reply_btn() {
+            $("#touser").val(current_username);
+            if (current_usertype == 0)
+                $("#msg-type-stu").prop("checked", true);
+            else if (current_usertype == 1)
+                $("#msg-type-tea").prop("checked", true);
+            else
+                $("#msg-type-ta").prop("checked", true);
+            $("#msg-title").val("");
+            $("#msg-content").val("");
+            check_to_user();
+        }
+
+        function check_to_user(){
+            to_en=false;
+            if($("#touser").val()=="") {
+                $("#checkname").text("");
+                return;
+            }
+            var touser=$("#touser").val();
+            var data={};
+            data.touser=touser;
+            if ($("#msg-type-stu").prop("checked"))
+                data.totype = "student";
+            else if ($("#msg-type-tea").prop("checked"))
+                data.totype = "teacher";
+            else
+                data.totype = "ta_assist";
+            url="search_name.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: $.toJSON(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data){
+                    if(data.code==200){
+                        to_en=true;
+                        $("#checkname").text("消息将发送给"+data.name);
+                        $("#checkname").css("color", "#0066FF");
+                    }
+                    else{
+                        $("#checkname").text("无效收件人");
+                        $("#checkname").css("color", "#FF0000");
+                    }
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+        function msg_send_btn(){
+            var content=$("#msg-content").val();
+            var title=$("#msg-title").val();
+            var touser=$("#touser").val();
+            if ($("#msg-type-stu").prop("checked"))
+                totype = "student";
+            else if ($("#msg-type-tea").prop("checked"))
+                totype = "teacher";
+            else
+                totype = "ta_assist";
+            var action="no";
+            var fid;
+            if(action=="response") {
+                fid = current_mid;
+            }
+            else{
+                fid=-1;
+            }
+
+            var data={};
+            data.content=content;
+            data.title=title;
+            data.touser=touser;
+            data.totype=totype;
+            data.fid=fid;
+            console.log(data);
+            url="forward_message.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: $.toJSON(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if(data.code==200){
+                        refreshList();
+                    }
+                    else{
+                        alert(data.result);
+                    }
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        $(document).ready(function(){
+            $("#sendMessage").on("click",function(){
+                window.open("forward_message.html");
+            });
+            $("#sendedSection").on("click",function(){
+                current_label = "send";
+                refreshList(current_label);
+            });
+            $("#receivedSection").on("click",function(){
+                current_label = "receive";
+                refreshList(current_label);
+            });
+            current_label = "receive";
+            refreshList();
+        });
+
+
+        function getCookie(cname)
+          {
+            var name = cname + "=";
+            var ca = document.cookie.split(';');
+            for(var i = 0; i < ca.length; i++) {
+              var c = ca[i].trim();
+              if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
+            }
+            return "";
+          }
+
+        function goto_index() {
+            if (getCookie("type") == "student")
+                window.location.href="../../student/Course_list.html";
+            else
+                window.location.href="../../teacher/teacher-center.html";
+        }
+    </script>
+</head>
+<body>
+
+
+<div class="container" id="div_bar">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+              </button> 
+              <a class="navbar-brand btn" onclick="goto_index()">首页<span class="glyphicon glyphicon-home"/></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                <li><a href="../../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                <li><a href="../infoModify/teacher_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                <li><a href="../../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="jumbotron">
+                <h1>
+                    你的私信，我为你收藏
+                </h1>
+            </div>
+            <div class="tabbable" id="tabs-489076">
+                <ul class="nav nav-tabs">
+                    <li class="active">
+                        <a href="#receivedPanel" data-toggle="tab" id="receivedSection">收件箱</a>
+                    </li>
+                    <li>
+                        <a href="#sendedPanel" data-toggle="tab" id="sendedSection">已发送</a>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="receivedPanel">
+                        <p>
+                        <table class="table" name="receiveTable">
+                            <thead>
+                            <tr>
+                                <th>
+                                    消息编号
+                                </th>
+                                <th>
+                                    发件人
+                                </th>
+                                <th>
+                                    消息主题
+                                </th>
+                                <th>
+                                    日期
+                                </th>
+                                <th>
+                                    状态
+                                </th>
+                                <th>
+                                    操作
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody id="receiveTable">
+
+                            </tbody>
+                        </table>
+                        </p>
+                    </div>
+                    <div class="tab-pane" id="sendedPanel">
+                        <p>
+                        <table class="table" name>
+                            <thead>
+                            <tr>
+                                <th>
+                                    消息编号
+                                </th>
+                                <th>
+                                    收件人
+                                </th>
+                                <th>
+                                    消息主题
+                                </th>
+                                <th>
+                                    日期
+                                </th>
+                                <th>
+                                    状态
+                                </th>
+                                <th>
+                                    操作
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody id="sendTable">
+
+                            </tbody>
+                        </table>
+                        </p>
+                    </div>
+                    <div style = "text-align:right;"> 
+                        <button class="btn btn-primary" data-toggle="modal" href="#modal-container-message">发送新消息</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <div class="modal fade" id="modal-container-message" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">发送私信</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">对方账号</label>
+                <div class="col-sm-8">
+                    <input type="text" class="form-control" name="touser" id="touser" oninput="check_to_user()" />
+                    <div>
+                      <label><input type="radio" name="hwtype" id="msg-type-stu" onclick="check_to_user()" checked/>学生</label>&nbsp;&nbsp;&nbsp;
+                      <label><input type="radio" name="hwtype" id="msg-type-tea" onclick="check_to_user()"/>教师</label>&nbsp;&nbsp;&nbsp;
+                      <label><input type="radio" name="hwtype" id="msg-type-ta" onclick="check_to_user()"/>助教</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                      <label id="checkname"></label>
+                    </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">标题</label>
+                <div class="col-sm-8"><input type="text" class="form-control" id="msg-title"/></div>
+              </div> 
+              <div class="form-group">
+                <label class="col-sm-2 control-label">内容</label>
+                <div class="col-sm-8"><textarea type="text" rows="5" class="form-control" id="msg-content"></textarea></div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-danger" onclick="msg_clear_btn()">清除</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="msg_send_btn()">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div class="modal fade" id="modal-container-view-message" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">查看私信</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">对方名称</label>
+                <div class="col-sm-8"><pre id="msg-view-nam">撒杀啥</pre></div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">标题</label>
+                <div class="col-sm-8"><pre id="msg-view-title">啊飒飒撒</pre></div>
+              </div> 
+              <div class="form-group">
+                <label class="col-sm-2 control-label">内容</label>
+                <div class="col-sm-8"><pre id="msg-view-content">内容</pre></div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="msg_revert_btn()" data-toggle="modal" href="#modal-container-message">转发</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="msg_reply_btn()" data-toggle="modal" href="#modal-container-message">回复</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>

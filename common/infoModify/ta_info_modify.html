@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
+    <title></title>
+    <link href="v3/layoutit.css" rel="stylesheet">
+
+
+    <!--[if lt IE 9]>
+    <script src="http://apps.bdimg.com/libs/html5shiv/3.7/html5shiv.min.js"></script>
+    <![endif]-->
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="v3/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="v3/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="v3/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="v3/apple-touch-icon-57-precomposed.png">
+    <link rel="shortcut icon" href="http://www.runoob.com/favicon.ico">
+
+    <script type="text/javascript" src="http://cdn.staticfile.org/jquery/2.0.0/jquery.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui/1.10.2/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui-touch-punch/0.2.2/jquery.ui.touch-punch.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="v3/jquery.htmlClean.js"></script>
+    <script type="text/javascript" src="v3/scripts.min.js"></script>
+    <script type="text/javascript">
+
+        var count=120;
+        var codeLength=6;
+        var phone_en=true;
+        var phone_changed=false;
+        var mail_changed=false;
+        var mail_en=true;
+        var phone="";
+        var mail="";
+
+        function checkSubmitEmail() {
+            if ($("#mail").val() == "") {
+                alert("邮箱不能为空!");
+                $("#mail").focus();
+                return false;
+            }
+            if (!$("#mail").val().match(/^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z0-9]+$/)) {
+                alert("邮箱格式不正确");
+                $("#email").focus();
+                return false;
+            }
+            return true;
+        }
+
+        function checkSubmitMobil() {
+            if ($("#phone").val() == "") {
+                alert("手机号码不能为空！");
+                $("#phone").focus();
+                return false;
+            }
+
+            if (!$("#mobile").val().match(/^(((13[0-9]{1})|(15[0-9]{1})|(17[0-9]{1})|(18[0-9]{1}))+\d{8})$/)) {
+                alert("手机号码格式不正确！");
+                $("#phone").focus();
+                return false;
+            }
+            return true;
+        }
+
+        function sendMessage(){
+            if(!checkSubmitMobil()){
+                return;
+            }
+
+            var InterValObj;
+            var timeCounter;
+            timeCounter = count;
+            var buttonName = "#sendMessage";
+            var phone = $("#phone").val();
+            var url = "send_message.php";
+            var data = {};
+            data.phone = phone;
+            console.log(data);
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data){
+                    $("#sendMessage").attr("disabled", true);
+                    $("#sendMessage").text(timeCounter + "秒后重新发送");
+                    InterValObj = window.setInterval(function () {
+                        if (timeCounter == 0) {
+                            window.clearInterval(InterValObj);
+                            $("#sendMessage").removeAttr("disabled");//启用按钮
+                            $("#sendMessage").text("重新发送验证码");
+                        }
+                        else {
+                            timeCounter--;
+                            $("#sendMessage").text(timeCounter + "秒后重新发送");
+                        }
+                    }, 1000);
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function sendMail(){
+            if(!checkSubmitEmail()){
+                return;
+            }
+
+            var InterValObj;
+            var timeCounter;
+            var mailCode="";
+            timeCounter = count;
+            var mail = '<'+$("#mail").val()+'>';
+            if ($("#mail").val() != "") {
+                for (var i = 0; i < codeLength; i++) {
+                    mailCode += parseInt(Math.random() * 9).toString();
+                }
+            }
+            var url = "send_mail.php";
+            var data = {};
+            data.subject = "浙江大学软件工程课程网站邮件验证";
+            data.body = mailCode;
+            data.mail = mail;
+            console.log(data);
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    $("#sendMail").attr("disabled", true);
+                    $("#sendMail").text(timeCounter + "秒后重新发送");
+                    InterValObj = window.setInterval(function(){
+                        if(timeCounter == 0){
+                            window.clearInterval(InterValObj);
+                            $("#sendMail").removeAttr("disabled");//启用按钮
+                            $("#sendMail").text("重新发送邮件");
+                        }
+                        else {
+                            timeCounter--;
+                            $("#sendMail").text(timeCounter + "秒后重新发送");
+                        }
+                    }, 1000);
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function verifyPhone(){
+            if($("#phone").val()==""||$("#phoneCode").val()==""){
+                $("#phoneResult").text("");
+                return;
+            }
+
+            var phoneCode = $("#phoneCode").val();
+            var phone = $("#phone").val();
+            if (phoneCode.length < 4) {
+                $("#phoneResult").text("");
+                return;
+            }
+
+            var url = "verify_phone.php";
+            var data = {};
+            data.phone = phone;
+            data.phoneCode = phoneCode;
+            console.log(data);
+
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if (data.code == 200) {
+                        phone_en=true;
+                        $("#phoneResult").text("验证成功");
+                        $("#phoneResult").css("color", "color:#28FF28;");
+                    } else {
+                        phone_en=false;
+                        $("#phoneResult").text("验证失败");
+                        $("#phoneResult").css("color", "color:#FF0000;");
+                    }
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function verifyMail(){
+            if($("#mail").val()==""||$("#mailCode").val()==""){
+                $("#mailResult").text("");
+                return;
+            }
+
+            var mailCode = $("#mailCode").val();
+            var mail = $("#mail").val();
+            if (mailCode.length < 6) {
+                $("#mailResult").text("");
+                return;
+            }
+
+            var url = "verify_mail.php";
+            var data = {};
+            data.mailCode = mailCode;
+            console.log(data);
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if (data.code == 200) {
+                        mail_en=true;
+                        $("#mailResult").text("验证成功");
+                        $("#mailResult").css("color", "color:#28FF28;");
+                    } else {
+                        mail_en=false;
+                        $("#mailResult").text("验证失败");
+                        $("#mailResult").css("color", "color:#FF0000;");
+                    }
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function verifyUsername(){
+            $("#usernameResult").text("");
+
+            var username = $("#username").val();
+
+            var url = "verify_username.php";
+            var data = {};
+            data.username = username;
+            console.log(data);
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if (data.code == 200) {
+                        username_en=true;
+                        $("#usernameResult").text("合法用户名");
+                        $("#usernameResult").css("color", "color:#28FF28;");
+                    } else {
+                        username_en=false;
+                        $("#usernameResult").text("不存在该用户名");
+                        $("#usernameResult").css("color", "color:#FF0000;");
+                    }
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function submitInfo(){
+            if($("#name").val()==""){
+                alert("请输入您的姓名！");
+                return;
+            }
+
+            if($("#college").val()==""){
+                alert("请输入您所在的学院！");
+                return;
+            }
+
+            if($("#major").val()==""){
+                alert("请输入您主修的专业！");
+                return;
+            }
+
+            if(!phone_en){
+                alert("请正确输入新的手机号码与验证码！");
+                return;
+            }
+
+            if(phone_changed){
+                if($.cookie('phone')!=$("#phone").val){
+                    alert("请正确输入您的手机号码！");
+                    return;
+                }
+            }
+
+            if(!mail_en){
+                alert("请正确输入邮箱验证码！");
+                return;
+            }
+
+            if(mail_changed) {
+                if ($.cookie('mail') != $("#mail").val) {
+                    alert("请正确输入您的邮箱！");
+                    return;
+                }
+            }
+
+
+            var data = {};
+            data.username=$("#username").val();
+            data.name=$("#name").val();
+            data.gender= $('input[name="gender"]:checked').val();
+            data.college=$("#college").val();
+            data.major=$("#major").val();
+            data.phone=$("#phone").val();
+            data.mail=$("#mail").val();
+
+            var url="ta_info_modify.php";
+            console.log(data);
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                success: function (data) {
+                    if (data.code == 200) {
+                        alert("修改成功！");
+                        window.location.href = "../../teacher/teacher-center.html";
+                    } else {
+                        alert("修改失败！");
+                    }
+                },
+                error: function (data) {
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            var data={};
+            console.log(data);
+            var url="get_ta_info.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if(data.code==200) {
+                        $("#username").val(data.username);
+                        $("#username").attr("disabled","true");
+                        $("#name").val(data.name);
+                        $("input[type='radio'][value='"+data.gender+"']").attr("checked",true);
+                        $("#college").val(data.college);
+                        $("#major").val(data.major);
+                        $("#phone").val(data.phone);
+                        $("#mail").val(data.mail);
+                        $("#phone").attr("disabled","true");
+                        $("#mail").attr("disabled","true");
+                        $("#phoneCode").attr("disabled","true");
+                        $("#mailCode").attr("disabled","true");
+                        $("#sendMessage").attr("disabled","true");
+                        $("#sendMail").attr("disabled","true");
+                    }
+                    else{
+                        alert("获取信息失败！");
+                    }
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+            });
+        })
+
+        function rmPhoneBind(){
+            if($("#rmPhoneBind").val()=="a") {
+                phone_en = false;
+                phone_changed = true;
+                $("#phone").removeAttr('disabled');
+                $("#phoneCode").removeAttr('disabled');
+                $("#sendMessage").removeAttr('disabled');
+                phone=$("#phone").val();
+                $("#rmPhoneBind").text("取消重新绑定");
+                $("#rmPhoneBind").val("d");
+            }
+            else{
+                phone_en = true;
+                phone_changed = false;
+                $("#phone").attr('disabled',true);
+                $("#phoneCode").attr('disabled',true);
+                $("#sendMessage").attr('disabled',true);
+                $("#phone").val(phone);
+                $("#rmPhoneBind").text("解除手机绑定");
+                $("#rmPhoneBind").val("a");
+            }
+        }
+
+        function rmMailBind(){
+            if($("#rmMailBind").val()=="a") {
+                mail_en = false;
+                mail_changed = true;
+                $("#mail").removeAttr('disabled');
+                $("#mailCode").removeAttr('disabled');
+                $("#sendMail").removeAttr('disabled');
+                mail=$("#mail").val();
+                $("#rmMailBind").text("取消重新绑定");
+                $("#rmMailBind").val("d");
+            }
+            else{
+                mail_en = true;
+                mail_changed = false;
+                $("#mail").attr('disabled',true);
+                $("#mailCode").attr('disabled',true);
+                $("#sendMail").attr('disabled',true);
+                $("#mail").val(mail);
+                $("#rmMailBind").text("解除邮箱绑定");
+                $("#rmMailBind").val("a");
+            }
+        }
+
+
+        $(function() {
+            $("#rmPhoneBind").on("click", function () {
+                rmPhoneBind();
+            });
+        });
+
+        $(function(){
+            $("#rmMailBind").on("click",function(){
+                rmMailBind();
+            })
+        });
+
+
+        $(function() {
+            $("#sendMessage").on("click", function () {
+                sendMessage();
+            });
+        });
+
+        $(function(){
+            $("#sendMail").on("click",function(){
+                sendMail();
+            })
+        });
+
+        $(document).ready(function() {
+            $("#phoneCode").on("input propertychange", function () {
+                verifyPhone();
+            });
+        });
+
+        $(document).ready(function() {
+            $("#mailCode").on("input propertychange", function () {
+                verifyMail();
+            });
+        });
+
+
+
+        $(document).ready(function() {
+            $("#username").on("input propertychange", function () {
+                verifyUsername();
+            });
+        });
+
+        $(function(){
+            $("#submitInfo").on("click",function(){
+                submitInfo();
+            });
+        });
+    </script>
+</head>
+<body>
+<div class="container" id="div_bar">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                    </button>
+                    <a class="navbar-brand btn" onclick="goto_index()">首页<span class="glyphicon glyphicon-home"/></a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="messageManagement.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                        <li><a href="../../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                        <li><a href="../infoModify/ta_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                        <li><a href="../../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="jumbotron">
+                <h1>
+                    管理您的个人信息
+                </h1>
+            </div>
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label for="username" class="col-sm-2 control-label">用户名</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;" id="username" />
+                        <p> &nbsp&nbsp&nbsp&nbsp<span id="usernameResult"></span></p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="name" class="col-sm-2 control-label">姓名</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;" id="name" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <div class="radio">
+                            <input type="radio" name="gender" value="male" checked>男<br>
+                            <input type="radio" name="gender" value="female">女
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="college" class="col-sm-2 control-label">学院</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;" id="college" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="major" class="col-sm-2 control-label">专业</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;" id="major" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="phone" class="col-sm-2 control-label">手机号码</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;display:inline;" id="phone" />
+                        <button type="button" id="rmPhoneBind" class="btn btn-default" value="a">解除手机绑定</button>
+                    </div>
+                    <label for="phoneCode" class="col-sm-2 control-label">短信验证码</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;display:inline;" id="phoneCode" />
+                        <button type="button" id="sendMessage" class="btn btn-default">发送短信验证码</button><br>
+                        <p> &nbsp&nbsp<span id="phoneResult"></span></p>
+                    </div><br>
+                </div>
+                <div class="form-group">
+                    <label for="mail" class="col-sm-2 control-label">个人邮箱</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;display:inline;" id="mail" />
+                        <button type="button" id="rmMailBind" class="btn btn-default" value="a">解除邮箱绑定</button>
+                    </div>
+                    <label for="mailCode" class="col-sm-2 control-label">邮件验证码</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" style="width:200px;display:inline;" id="mailCode" />
+                        <button type="button" id="sendMail" class="btn btn-default">发送验证邮件</button><br>
+                        <p> &nbsp&nbsp<span id="mailResult"></span></p>
+                    </div><br>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="button" class="btn btn-default" id="submitInfo">确认修改</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

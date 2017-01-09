@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      .textherf {cursor: pointer;}
+    </style>
+    <script>
+      function postJSON(url, jsonStr, successFunction, async=true, dataType="json", contentType="application/text") {
+        $.ajax({
+          url : url,
+          type : 'POST',
+          async : async,
+          data : jsonStr,
+          processData : false,
+          dataType : dataType,
+          contentType : contentType,
+          success : function(response, status, xhr) {
+            if (dataType != "json")
+              response = $.parseJSON(response);
+            if (status != "success")
+              alert("未知错误");
+            else if (response['code'] != 0)
+              alert("错误"+response['code']+"："+response['msg']);
+            else successFunction(response);
+          },
+          error : function(xhr, error, exception) {
+              // handle the error.
+              alert(exception.toString());
+          }
+        });
+      }
+      function getCookie(cname)
+      {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+          var c = ca[i].trim();
+          if (c.indexOf(name) == 0)
+            return c.substring(name.length, c.length);
+        }
+        return "";
+      }
+      function getRequest() {
+        var url = window.location.search;
+        var theRequest = new Object();
+        if (url.indexOf("?") == 0) {
+          var str = url.substr(1);
+          strs = str.split("&");
+          // return strs[0].split("=")[1];
+          for (var i = 0; i < strs.length; i++)
+            theRequest[strs[i].split("=")[0]] = strs[0].split("=")[1];
+        }
+        return theRequest;
+      }
+      function sort_by(str, reverse=true) {
+        if (reverse)
+          sort_by_object[str] = !sort_by_object[str];
+        if (str == 'STATUS') {
+          if (sort_by_object[str] == true) 
+            results.sort(function(a, b) { return a.checked < b.checked; });
+          else 
+            results.sort(function(a, b) { return a.checked > b.checked; });
+        } else if (str == 'SID') {
+          if (sort_by_object[str] == true)
+            results.sort(function(a, b) { return a.sid < b.sid; });
+          else
+            results.sort(function(a, b) { return a.sid > b.sid; });
+        } else if (str == 'NAME') {
+          if (sort_by_object[str] == true)
+            results.sort(function(a, b) { return a.name < b.name; });
+          else
+            results.sort(function(a, b) { return a.name > b.name; });
+        } else if (str == 'TIME') {
+          if (sort_by_object[str] == true)
+            results.sort(function(a, b) { return a.uploadtime < b.uploadtime; });
+          else
+            results.sort(function(a, b) { return a.uploadtime > b.uploadtime; });
+        } else {
+          if (sort_by_object[str] == true)
+            results.sort(function(a, b) { return a.score < b.score; });
+          else
+            results.sort(function(a, b) { return a.score > b.score; });
+        }
+        show_results();
+      }
+      function show_results() {
+        $("#result_list").empty();
+        for (var i = 0; i < results.length; i++)
+          addResult(results[i]);
+      }
+      function addResult(r) {
+        var html;
+        var status;
+        var color;
+        if (r.uploadtime < homework.end_t)
+          color = "8000FF";
+        else
+          color = "FF8000";
+        if (r.checked == 1) {
+          html  = "<tr class='success'>";
+          status = "已批改";
+        }
+        else {
+          html  = "<tr class='warning'>";
+          status = "未批改";
+        }
+        html += "  <td>"+status+"</td>";
+        html += "  <td>"+r.sid+"</td>";
+        html += "  <td>"+r.name+"</td>";
+        html += '  <td><span class="glyphicon glyphicon-exclamation-sign" style="color:#'+color+'"></span>'+r.uploadtime+"</td>";
+        html += "  <td>"+r.score+"</td>";
+        if (r.comment.length > 10)
+          html += "  <td>"+r.comment.substr(0, 9)+"…</td>";
+        else
+          html += "  <td>"+r.comment+"</td>";
+        html += "  <td data-toggle='modal' href='#modal-container-review' class='textherf' onclick='review("+r.rid+")'>批改</td>";
+        html += "</tr>";
+        $("#result_list").append(html);
+      }
+    </script>
+    <script>
+      function upload_csv() {
+        var fileData = $("#file_uploading");
+        if (fileData.val() == "") {
+          alert("请选择文件后再点击上传");
+          return;
+        }
+        var formData = new FormData();
+        formData.append("file[]", fileData[0].files[0]);
+        formData.append("hid", hid);
+        fileData.val(null);
+        postJSON('../teacher/homework/result/exportCSV.php', formData, function showResponse(response) {
+          // $("#modal-container-upload").css("display", "none");
+          get_show_results();
+        }, true, "", false);
+      }
+      function get_show_results() {
+        var req = {hid: hid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/homework/result/list.php", jsonStr, function showResponse(response) {
+          results = response.body.info;
+          sort_by_object['STATUS'] = false;
+          sort_by('STATUS', false);
+        });
+      }
+      function get_bkg_info() {
+        var html;
+        var req = {hid: hid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/check.php", jsonStr, function showResponse(response) {
+          var bkg_info = response.body;
+          html = '<a href="../teacher/course.html?coid='+bkg_info.coid+'">'+bkg_info.coname+'</a>';
+          $("#current_course").html(html);
+          html = '<a href="../teacher/class.html?clid='+bkg_info.clid+'">班级首页</a>';
+          $("#current_class").html(html);
+        });
+      }
+      function get_homework_info() {
+        var req = {hid: hid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/homework/detail.php", jsonStr, function showResponse(response) {
+          homework = response.body;
+          if (homework.type == "O") {
+            $("#offline_show_btns").css("display", "none");
+            $("#offline_show_btns-2").css("display", "none");
+          }
+          else {
+            $("#offline_show_btns").css("display", "block");
+            $("#offline_show_btns-2").css("display", "block");
+          }
+          get_show_results();
+        });
+      }
+      function download_single_result(rid) {
+        window.open("../teacher/homework/result/download.php?hid="+hid+"&type=S&rids[]="+rid);
+      }
+      function download_all_result() {
+        window.open("../teacher/homework/result/download.php?hid="+hid+"&type=A&rids[]=0");
+      }
+      function download_unchecked_result() {
+        window.open("../teacher/homework/result/download.php?hid="+hid+"&type=U&rids[]=0");
+      }
+      function download_template() {
+        window.open("../teacher/homework/result/downloadCSV.php?hid="+hid); 
+      }
+      function review_btn() {
+        var req = {rid: current_rid, comment: $("#hw-comment").val()};
+        req.scores = new Array();
+        for (var i = 0; i < qs.length; i++)
+          req.scores.push({score: parseInt($("#score-q"+i).val()), qid: qs[i].qid});
+        var jsonStr = $.toJSON(req);
+        // alert(jsonStr);
+        postJSON("../teacher/homework/result/checkAnswer.php", jsonStr, function showResponse(response) {
+          get_show_results();
+        });
+      }
+      function review(rid) {
+        var i;
+        current_rid = rid;
+        for (i = 0; i < results.length; i++)
+          if (results[i].rid == rid)
+            break;
+        if (i == results.length)
+          return;
+
+        $("#check-form").empty();
+        var req = {rid: rid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/homework/result/viewAnswer.php", jsonStr, function showResponse(response) {
+          re_info = response.body;
+          qs = re_info.homework;
+          var html = "";
+          if (results[i].type == "F" || results[i].type == "G") {
+            html += '<div class="form-group">';
+            html += '  <label class="col-sm-2 control-label">下载作业</label>';
+            html += '  <a class="btn btn-primary" onclick="download_single_result('+rid+')">下载</a>';
+            html += '</div>';
+            html += view_score(qs[0], 0, i);
+          } else {
+            for (var j = 0; j < qs.length; j++) {
+              var content;
+              if (qs[j].content == undefined)
+                content = "<i>（没有做）</i>";
+              else
+                content = qs[j].content;
+              html += '<div class="form-group">';
+              html += '  <label class="col-sm-2 control-label">第'+(j+1)+'题</label>';
+              if (qs[j].type == "0" || qs[j].type == "1") {
+                html += '  <div class="col-sm-3">'+content+'</div>';  
+                html += '  <div class="col-sm-6">（正确答案：'+qs[j].answer+'）</div>';  
+              } else {
+                html += '  <div class="col-sm-9">'+content+'</div>';
+              }
+              html += '</div>';
+              html += view_score(qs[j], j);
+            }
+          }
+          html += '<div class="form-group">';
+          html += '  <label class="col-sm-2 control-label">总得分</label>';
+          html += '  <div class="col-sm-3" id="total-score">0</div>';
+          html += '</div>';
+
+          html += '<div class="form-group">';
+          html += '  <label class="col-sm-2 control-label">评论</label>';
+          html += '  <div class="col-sm-9">';
+          html += '    <input type="text" class="form-control" id="hw-comment" value="'+re_info.comment+'"/>';
+          html += '  </div>';
+          html += '</div>';
+          $("#check-form").append(html);
+          update_score();
+          // view_review(response.body);
+        });
+      }
+      function update_score() {
+        var score, totscore = 0;
+        for (var i = 0; i < qs.length; i++) {
+          score = parseInt($("#score-q"+i).val());
+          if (score < 0)
+            $("#score-q"+i).val(0);
+          else if (score > qs[i].score)
+            $("#score-q"+i).val(qs[i].score);
+          totscore += parseInt($("#score-q"+i).val());
+        }
+        $("#total-score").text(totscore);
+      }
+      function view_score(re_hw, index, hindex=-1) {
+        var html = "";
+        var score;
+        if (hindex == -1) {
+          score = parseInt(re_hw.re_score);
+          if (score == -1) {
+            score = 0;
+            if (re_hw.type == "0" || re_hw.type == "1")
+              if (re_hw.answer == re_hw.content)
+                score = re_hw.score;
+          }
+        } else {
+          score = results[hindex].score;
+        }
+        html += '<div class="form-group">';
+        html += '  <label class="col-sm-2 control-label">得分</label>';
+        html += '  <div class="col-sm-3">';
+        html += '    <input type="number" class="form-control" oninput="update_score()" value="'+ score+'" id="score-q'+index+'"/>';
+        html += '  </div>';
+        html += '  <label class="col-sm-3 control-label">（此题'+re_hw.score+'分）</label>';
+        html += '</div>';
+        return html;
+      }
+      function view_review(info) {
+        $("#check-form").empty();
+        var html = "";
+
+        html += '<div class="form-group">';
+        html += '  <label class="col-sm-2 control-label" id="total-score">总得分</label>';
+        html += '  <div class="col-sm-3">100</div>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '  <label class="col-sm-2 control-label">评论</label>';
+        html += '  <div class="col-sm-9">';
+        html += '    <input type="text" class="form-control" id="hw-comment" value="'+info.comment+'"/>';
+        html += '  </div>';
+        html += '</div>';
+
+        $("#check-form").append(html);
+      }
+    </script>
+    <script>
+      $(document).ready(function(){
+        // initialize
+        var request = getRequest();
+        hid = request.hid;
+        sort_by_object = {'STATUS': true, 'SID': true, 'NAME': true, 'TIME': true, 'SCORE': true};
+        get_homework_info();
+        get_bkg_info();
+      });
+  	</script>
+  </head>
+  <body>
+    <!-- top-bar -->
+    <div class="container" id="div_bar">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+              </button>
+              <a class="navbar-brand" href="teacher-center.html">首页<span class="glyphicon glyphicon-home"/></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                <li><a href="../common/infoModify/teacher_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- path-bar -->
+    <div class="container">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <ul class="breadcrumb">
+            <li>
+               <a href="../teacher/teacher-center.html">首页</a>
+            </li>
+            <li id="current_course">
+              <!-- <a href="../teacher/course.html?coid=1">软件需求工程</a> -->
+            </li>
+            <li id="current_class">
+                <!-- <a href="../teacher/class.html?clid=1">班级首页</a> -->
+            </li>
+            <li class="active" id="current_homework">作业管理</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" id="div_show">
+      <div class="row clearfix">
+        <div class="col-md-12 column" id="offline_show_btns">
+          <a class="btn btn-primary col-md-offset-1 pull-right" onclick="download_all_result()">下载所有作业</a>
+          <a class="btn btn-primary col-md-offset-1 pull-right" onclick="download_unchecked_result()">下载未批改作业</a>
+          <br/><br/>
+        </div>
+        <div class="col-md-12 column">
+          <table class="table" id="materials">
+            <thead class="data_list">
+              <tr>
+                <th onclick="sort_by('STATUS')"  class="textherf">状态</th>
+                <th onclick="sort_by('SID')"  class="textherf">学号</th>
+                <th onclick="sort_by('NAME')"  class="textherf">姓名</th>
+                <th onclick="sort_by('TIME')"  class="textherf">提交时间</th>
+                <th onclick="sort_by('SCORE')"  class="textherf">得分</th>
+                <th>评论</th>
+                <th>批改</th>
+              </tr>
+            </thead>
+            <tbody id="result_list">
+              
+            </tbody>
+          </table>
+        </div>
+        <div class="col-md-12 column" id="offline_show_btns-2">
+          <a class="btn btn-primary col-md-offset-1 pull-right" data-toggle="modal" href="#modal-container-upload">批量导入成绩</a>
+          <a class="btn btn-primary col-md-offset-1 pull-right" onclick="download_template()">下载学生模板</a>
+          <br/><br/>
+        </div>
+      </div>
+    </div>
+
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+    <div class="modal fade" id="modal-container-review" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-description">作业批改</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form" id="check-form">
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="review_btn()">提交</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-container-upload" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                   <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                  <h4 class="modal-title" id="myModalLabel">
+                      批量导入成绩
+                  </h4>
+              </div>
+              <div class="modal-body">
+                  <input id="file_uploading" type="file" name="file[]" value=""/>
+              </div>
+              <div class="modal-footer">
+                   <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button> 
+                   <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="upload_csv()">上传</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+
+  </body>
+</html>

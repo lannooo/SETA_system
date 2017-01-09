@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
+    <title></title>
+    <link href="v3/layoutit.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+    <script src="http://apps.bdimg.com/libs/html5shiv/3.7/html5shiv.min.js"></script>
+    <![endif]-->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="v3/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="v3/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="v3/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="v3/apple-touch-icon-57-precomposed.png">
+    <link rel="shortcut icon" href="http://www.runoob.com/favicon.ico">
+
+    <script type="text/javascript" src="http://cdn.staticfile.org/jquery/2.0.0/jquery.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui/1.10.2/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui-touch-punch/0.2.2/jquery.ui.touch-punch.min.js"></script>
+    <script type="text/javascript" src="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="v3/jquery.htmlClean.js"></script>
+    <script type="text/javascript" src="v3/scripts.min.js"></script>
+    <script>
+        var to_en;
+
+        function init(){
+            var action=request("action");
+
+            if(action=="response") {
+                var content=decodeURI(request("content"));
+                var name=decodeURI(request("name"));
+                var typeid=request("tftype");
+                var title=decodeURI(request("title"));
+                if(typeid==0)
+                    $("#totype").val("student");
+                else if(typeid==1)
+                    $("#totype").val("teacher");
+                else
+                    $("#totype").val("ta_assist");
+                $("#content").text("Re:\r\n" + content + "\r\n\r\n");
+                var data={};
+                data.toid=request("toid");
+                data.totype=request("tftype");
+                console.log(data);
+                url="search_username.php";
+                $.ajax({
+                    type: 'post',
+                    dataType: "json",
+                    data: JSON.stringify(data),
+                    url: url,
+                    contentType : "application/text",
+                    success: function (data){
+                        if(data.code==200){
+                            $("#touser").val(data.username);
+                        }
+                        else{
+                            alert(data.username);
+                        }
+                    },
+                    erro:function(data){
+                        alert("ajax传输失败！");
+                    }
+                });
+                $("#checkname").text("消息将发送给"+name);
+                $("#title").val("Re:"+title);
+                return;
+            }
+            if(action=="forward"){
+                var content=decodeURI(request("content"));
+                var title=decodeURI(request("title"));
+                $("#title").val("FWD:"+title);
+                $("#content").text("下面是被转发的内容:\r\n" + content + "\r\n\r\n");
+            }
+        }
+
+        function checkToUser(){
+            to_en=false;
+
+            if($("#touser").val()==""||$("#totype").val()=="") {
+                $("#checkname").text("");
+                return;
+            }
+
+            var touser=$("#touser").val();
+            var data={};
+            data.touser=touser;
+            data.totype=$("#totype").val();
+            console.log(data);
+            url="search_name.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data){
+                    if(data.code==200){
+                        to_en=true;
+                        $("#checkname").text("消息将发送给"+data.name);
+                        $("#checkname").css("color", "color:#0066FF;");
+                    }
+                    else{
+                        $("#checkname").text("无效收件人");
+                        $("#checkname").css("color", "color:#FF0000;");
+                    }
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+            });
+        }
+
+        function request(paras) {
+            var url = location.href;
+            var paraString = url.substring(url.indexOf("?")+1,url.length).split("&");
+            var paraObj = {};
+            for (i=0; j=paraString[i]; i++){
+                paraObj[j.substring(0,j.indexOf("=")).toLowerCase()] = j.substring(j.indexOf("=")+1,j.length);
+            }
+            var returnValue = paraObj[paras.toLowerCase()];
+            if(typeof(returnValue)=="undefined"){
+                return "";
+            }
+            else{
+                return returnValue;
+            } }
+
+        function forward_message(){
+            var content=$("#content").val();
+            var title=$("#title").val();
+            var touser=$("#touser").val();
+            var toid=request("toid");
+            var totype=$("#totype").val();
+            var action=request("action");
+            var fid;
+            if(action=="response") {
+                fid = request("mid")
+            }
+            else{
+                fid=-1;
+            }
+
+            var data={};
+            data.content=content;
+            data.title=title;
+            data.touser=touser;
+            data.toid=toid;
+            data.totype=totype;
+            data.fid=fid;
+            console.log(data);
+            url="forward_message.php";
+            $.ajax({
+                type: 'post',
+                dataType: "json",
+                data: JSON.stringify(data),
+                url: url,
+                contentType : "application/text",
+                success: function (data) {
+                    if(data.code=200){
+                        alert(data.result);
+                    }
+                    else{
+                        alert(data.result);
+                    }
+                },
+                erro:function(data){
+                    alert("ajax传输失败！");
+                }
+
+            })
+        }
+
+        $(document).ready(function(){
+            init();
+        })
+
+        $(document).ready(function(){
+            $("#send").on("click",function(){
+                if(!to_en) {
+                    alert("请输入正确用户名!");
+                    return;
+                }
+
+                if($("#title").val()=="") {
+                    alert("标题不能为空!");
+                    return;
+                }
+
+                if($("#content").val()=="") {
+                    alert("内容不能为空!");
+                    return;
+                }
+
+                forward_message();
+            });
+        });
+
+        $(document).ready(function(){
+            $("#touser").on("input propertychange",function(){
+                checkToUser();
+            });
+        })
+        $(document).ready(function(){
+            $("#totype").on("change",function(){
+                checkToUser();
+            });
+        })
+
+    </script>
+</head>
+<body>
+<div id="text">
+    <table>
+        <tr>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+</div>
+
+<div class="container">
+    <div class="row clearfix">
+        <form class="col-md-12 column">
+            <div class="jumbotron">
+                <h1>
+                    Hello, world!
+                </h1>
+                <p>
+                    This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.
+                </p>
+                <p>
+                    <a class="btn btn-primary btn-large" href="#">Learn more</a>
+                </p>
+            </div>
+                <form>
+                <table cellpadding="3" cellspacing="1" align="center" class="tableborder1">
+                    <tr>
+                        <th colspan="3">
+                            发送短消息（请输入完整信息）</td>
+                    </tr>
+                    <tr>
+                        <td class="tablebody1" valign="middle"><b>收件人：</b></td>
+                        <td class="tablebody1" valign="middle">
+                            <input type="text" class="form-control" name="touser" id="touser" style="width:300px;display:inline;" />
+                            <select name="font" id="totype">
+                                <option selected="selected" value="">选择</option>
+                                <option value="teacher">老师</option>
+                                <option value="student">学生</option>
+                                <option value="ta_assist">助教</option>
+                            </select>
+                        </td><br>
+                    </tr>
+                    <td class="tablebody1" valign="middle"><b>提示：</b></td>
+                    <td class="tablebody1" valign="middle" >
+                        <p><span id="checkname"></span></p>
+                    </td>
+                    <tr>
+                        <td class="tablebody1" valign="top" width="15%"><b>标题：</b></td>
+                        <td class="tablebody1" valign="middle">
+                            <input type="text" name="title" class="form-control" id="title" style="width:500px" maxlength="80" value="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="tablebody1" valign="top" width="15%"><b>内容：</b></td>
+                        <td class="tablebody1" valign="middle">
+                            <textarea cols="70" rows="6" name="message" id="content" class="form-control" title="Ctrl+Enter发送" onpropertychange="if(this.scrollHeight>120) this.style.posHeight=this.scrollHeight"></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="tablebody2" valign="middle" colspan="2" align="center">
+                            <input type="button" class="btn btn-default" id="send" value="发送" name="Submit" />
+                            &nbsp;
+                            <input type="reset" class="btn btn-default" name="Clear" value="清除" />
+                            &nbsp;
+                            <input type="button" class="btn btn-default" name="close" value="关闭" onclick="window.close()" />
+                        </td>
+                    </tr>
+                </table>
+                </form>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+</body>
+</html>

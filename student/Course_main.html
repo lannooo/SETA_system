@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      /*#chartData{width:220px;margin:0 40px 0 0;float:right;border-collapse:collapse;box-shadow:0 0 1em rgba(0, 0, 0, 0.5);-moz-box-shadow:0 0 1em rgba(0, 0, 0, 0.5);-webkit-box-shadow:0 0 1em rgba(0, 0, 0, 0.5);background-position:0 -100px;}
+      #chartData th, #chartData td{padding:0.5em;border:1px dotted #666;text-align:left;}*/
+      .textherf {cursor: pointer;}
+    </style>
+
+    <script>
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+        var coid = getQueryString('coid');
+        var tid = getQueryString('tid');
+        var clid = getQueryString('clid');
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            show_info();
+            show_notice();
+            gname = null;
+            show_mygroup();
+            show_homework();
+            sort_by_object = {'TYPE': true, 'NAME': true, 'SIZE': true, 'TIME': true, 'DOWN': true};
+            curr_dir = "root";
+            get_show_material_folder();
+            //sort_by('TYPE');
+        });
+
+        function show_info() {
+            $.ajax({
+                url:'Class_detail.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    clid:clid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    if(data == "fail_no_course" || data == "fail_no_connection" || data == "fail_select_error" || data == "fail_error_result" || data == "fail_no_user")
+                        alert("没有登陆的学生!");
+                    else {
+                        var course_info = eval('(' + data + ')');
+                        $("#course #course_name").text(course_info.coname);
+                        $("#course #course_college").text(course_info.college);
+                        $("#course #course_cotype").text(course_info.cotype);
+                        addInfo("", " ");
+                        addInfo("课程名称", course_info.college+"-"+course_info.coname+"("+course_info.coname_en+", "+course_info.cocode+"-"+course_info.semster+")");
+                        addInfo("课程时间", course_info.cltime);
+                        addInfo("课程地点", course_info.place);
+                        addInfo("先导课程", course_info.pre_learning);
+                        addInfo("课程背景", course_info.background);
+                        addInfo("教学计划", course_info.plan);
+                        addInfo("项目介绍", course_info.project_info);
+                        addInfo("教材课本", course_info.textbook);
+                        addInfo("其他", "周学时 "+course_info.week_learn_time+"("+course_info.weight+")， 学分 "+course_info.credit);
+                        $("#current_course").text(course_info.coname);
+                        var html = "<div class='col-xs-1'></div>";
+                        html += "<div class='col-xs-2'><button class='btn btn-default btn-link' onclick='jump_teacherInfo()'>查看教师信息</button></div>";
+                        //html += "<div class='col-xs-2'><button class='btn btn-default btn-link' onclick='jump_teacherInfo()'>查看课程信息</button></div>";
+                        $("#course #info_div").append(html);
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+                complete:function(){
+                }
+            })
+        }
+        function addInfo(title, content) {
+            if (content == null || content == "")
+                content = "暂无数据";
+            html = '<text><dt id="titl8e">' + title + '</dt><dd id="content">' + content + '</dd></text>';
+            $("#course #info_div").append(html);
+        }
+        function jump_teacherInfo() {
+            window.open("Course_TeacherInfo_detail.html?tid=" + tid);
+        }
+
+        function show_notice() {
+            $.ajax({
+                url: 'Course_Notice_list.php',
+                type: 'GET', //GET
+                async: true,    //或false,是否异步
+                data: {
+                    coid: coid,
+                    tid: tid
+                },
+                timeout: 5000,    //超时时间
+                dataType: 'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend: function (xhr) {
+                },
+                success: function (data, textStatus, jqXHR) {
+                    //if (data == "fail_no_connection" || data == "fail_select_error")
+                    //    alert("没有登陆的学生!");
+                    if (data != "fail_no_notice" && data != "fail_no_user") {
+                        var noticeBlock = createNoticeBlock(data);
+                        document.getElementById("notice_div").innerHTML = noticeBlock;
+                    }
+                },
+                error: function (xhr, textStatus) {
+                    alert("发生未知错误!");
+                },
+                complete: function () {
+                }
+            })
+        }
+        function createNoticeBlock(data) {
+            var obj = eval(data);
+            var noticeBlock = "";
+            for(var i = 0; i < obj.length; i++) {
+                noticeBlock = noticeBlock + singleNoticeString(obj[i].anid, obj[i].title, obj[i].adate, obj[i].type, obj[i].content);
+            }
+            return noticeBlock;
+        }
+        function singleNoticeString(anid, title, adate, type, content) {
+            var string = "", typeString;
+            if (type == "e") {
+                typeString = "danger";
+            }
+            else {
+                typeString = "info";
+            }
+            string = string +
+                    "<div class='col-md-12 column textherf'>" +
+                    "  <div class='alert alert-success alert-" + typeString + " textherf' data-toggle='modal' href='#modal-container-modify-notice'>" +
+                    "    <h4>" + title + "<small>[" + adate + "]</small></h4>" +
+                    "    <strong>" + content + "</strong>" +
+                    "  </div>" +
+                    "</div>";
+            return string;
+        }
+
+        function show_mygroup() {
+            $.ajax({
+                url:'Group_showMyGroup.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    clid: clid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    inGroup=false;
+                    $("#group_div").empty();
+                    if(data == "fail_no_user"){
+                    }
+                    else if(data == "fail_no_group"){
+                        var string = "<button class='btn btn-primary btn-block' id='create_group' href='#modal-container-689251' data-toggle='modal'>创建小组</button></br>";
+                        $("#group_div").append(string);
+                    }
+                    //else if(data == "fail_no_connection" || data == "fail_select_error" || data == "fail_no_student")
+                    //    alert("No connection!");
+                    else {
+                        inGroup=true;
+                        var myGroupBlock = createMyGroupBlock(data);
+                        $("#group_div").append(myGroupBlock);
+                    }
+                    show_grouplist();
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+                complete:function(){
+                }
+            })
+        }
+        function createMyGroupBlock(data){
+            var group = eval('(' + data.split("&&&")[0] + ')');
+            var obj = eval('(' + data.split("&&&")[1] + ')');
+            var groupBlock = "";
+            gid = group.gid;
+            gname = group.gname;
+            groupBlock = groupBlock +
+                    "<div class='panel panel-info'>" +
+                    "<div class='panel-heading'>" + "<strong>我的小组： </strong>" + group.gname + "</div> " +
+                    "<div class='panel-body'> " +
+                    "<table class='table table-striped'> " +
+                    "<thead><tr><th>组员类型</th><th>组员姓名</th><th>组员学号</th><th>手机</th><th>电子邮箱</th><th>学院</th><th>专业</th></tr></thead>" +
+                    "<tbody> ";
+            for(var i = 0; i < obj.length; i++){
+                groupBlock = groupBlock + singleGroupMemberString(obj[i].type, obj[i].name, obj[i].username, obj[i].phone, obj[i].email, obj[i].college, obj[i].major);
+            }
+            groupBlock = groupBlock +
+                    "</tbody> " +
+                    "</table> " +
+                    "</div>" +
+                    "    <div class='panel-footer' align='right' >" +
+                    "      </b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+                    "      <b class='textherf' onclick='drop_group()'>" +
+                    "        <span class='glyphicon glyphicon-remove'/>退出小组" +
+                    "      </b>" +
+                    "    </div>" +
+                    "</div>";
+            return groupBlock;
+        }
+        function drop_group(){
+            $.ajax({
+                url: 'Group_dropout.php',
+                type:'POST', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    gid: gid,
+                    clid: clid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    if(data == "success") {
+                        alert("退出小组成功！");
+                        gname = null;
+                        show_mygroup();
+                    }
+                    else alert("退出小组失败！");
+                },
+                error:function(xhr,textStatus){
+                    alert("退出小组失败!");
+                },
+                complete:function(){
+                }
+            })
+        }
+        function singleGroupMemberString(type, name, username, phone, email, college, major){
+            var string = "", typeString;
+            if(type == "leader"){
+                typeString = "组长";
+            }
+            else typeString = "组员";
+
+            string = string +
+                    "<tr>" +
+                    "<td>" + typeString + "</td>" +
+                    "<td>" + name + "</td>" +
+                    "<td>" + username + "</td>" +
+                    "<td>" + phone + "</td>" +
+                    "<td>" + email + "</td>" +
+                    "<td>" + college + "</td>" +
+                    "<td>" + major + "</td>" +
+                    "</tr> ";
+            return string;
+        }
+        function create_group() {
+            var gname = document.getElementById("groupNameInput").value;
+            $.ajax({
+                url: 'Group_create.php',
+                type:'POST', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    clid: clid,
+                    gname: gname
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    //alert(data);
+                    if(data == "success") {
+                        alert("创建小组成功！");
+                        gname = null;
+                        show_mygroup();
+                        $("#modal-container-689251").modal("hide");
+                    }
+                    else alert("创建小组失败！");
+                },
+                error:function(xhr,textStatus){
+                    alert("创建小组失败!");
+                },
+                complete:function(){
+                }
+            })
+        }
+        function show_grouplist() {
+            $(document).ready(function(){
+                $.ajax({
+                    url:'Group_list.php',
+                    type:'GET', //GET
+                    async:true,    //或false,是否异步
+                    data:{
+                        clid: clid
+                    },
+                    timeout:5000,    //超时时间
+                    dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                    beforeSend:function(xhr){
+                    },
+                    success:function(data,textStatus,jqXHR) {
+                        //alert(data);
+                        //if(data == "fail_no_course" || data == "fail_no_connection" || data == "fail_select_error")
+                        //    alert("No connection!");
+                        if(data != "fail_no_user"){
+                            var groupListBlock = createGroupListBlock(data);
+                            $("#group_div").append(groupListBlock);
+                            if(inGroup == true){
+                                var buttonList = document.getElementsByName("join_group");
+                                for(var i = 0; i < buttonList.length; i++)
+                                    buttonList[i].disabled = true;
+                            }
+                        }
+                    },
+                    error:function(xhr,textStatus) {
+                        alert("Error!");
+                    },
+                    complete:function(){
+                    }
+                })
+            });
+        }
+        function createGroupListBlock(data){
+            var obj = eval(data);
+            var courseBlock = "";
+            for(var i = 0; i < obj.length; i++){
+                if(obj[i].gname == gname)
+                    continue;
+                courseBlock = courseBlock + singleGroupListString(obj[i].gid, obj[i].gname, obj[i].leader_username, obj[i].leader_name, obj[i].count);
+            }
+            return courseBlock;
+        }
+        function singleGroupListString(gid, gname, leader_username, leader_name, count){
+            var string = "";
+            string = string +
+                    "<div class='panel panel-default'>" +
+                    "<div class='panel-heading'>" + gname + "</div> " +
+                    "<div class='panel-body'> " +
+                    "<div class='col-xs-4'> " +
+                    "<p><strong>组长学号：</strong>" + leader_username + "</p> " +
+                    "</div> " +
+                    "<div class='col-xs-4'> " +
+                    "<p><strong>组长姓名：</strong>" + leader_name + "</p> " +
+                    "</div> " +
+                    "<div class='col-xs-3'> " +
+                    "<p><strong>组员人数：</strong>" + count + "</p> " +
+                    "</div> " +
+                    "<div class='col-xs-1'> " +
+                    "<button class='btn btn-default' name='join_group' type='button' onclick='join_group(" + gid + ")'>加入小组</button> " +
+                    "</div> " +
+                    "</div>" +
+                    "</div>";
+            return string;
+        }
+        function join_group(gid){
+            $.ajax({
+                url: 'Group_join.php',
+                type:'POST', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    gid: gid,
+                    clid: clid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    if(data == "success") {
+                        alert("加入小组成功！");
+                        gname = null;
+                        show_mygroup();
+                    }
+                    else alert("加入小组失败！");
+                },
+                error:function(xhr,textStatus){
+                    alert("加入小组失败!");
+                },
+                complete:function(){
+                }
+            })
+        }
+
+        function show_homework() {
+            $.ajax({
+                url:'Course_Homework_list.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    clid:clid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    //if(data == "fail_no_homework")
+                    //    alert("No homework!");
+                    //else if(data == "fail_no_connection" || data == "fail_select_error")
+                    //    alert("No connection!");
+                    if(data != "fail_no_homework" && data != "fail_no_user"){
+                        var hwBlock = createHmBlock(data);
+                        document.getElementById("homework_div").innerHTML = hwBlock;
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+                complete:function(){
+                }
+            })
+        }
+        function createHmBlock(data){
+            var obj = eval(data);
+            var hwBlock = "";
+            for(var i = 0; i < obj.length; i++){
+                hwBlock = hwBlock + singleHomeworkString(obj[i]);
+            }
+            return hwBlock;
+        }
+        function singleHomeworkString(hw){
+            var typeString, resultString;
+            if(hw.type == 'F'){
+                typeString = "offline";
+            }
+            else if(hw.type == 'O'){
+                typeString = "online";
+            }
+            else if(hw.type == 'G'){
+                typeString = "group";
+            }
+            else typeString = "undefined";
+
+            var string = "";
+            if(hw.result == null) {
+                resultString = "未完成";
+                string = "<div class='panel panel-primary'>";
+            }
+            else if(0 == hw.result.ifcorrected){
+                resultString = "未批改";
+                string = "<div class='panel panel-warning'>";
+            }
+            else {
+                resultString = "已批改";
+                string = "<div class='panel panel-success'>";
+            }
+
+            string = string +
+                    "<div class='panel-heading'>" + hw.name + "</div> " +
+                    "<div class='panel-body'> " +
+                    "      <div class='col-md-12 column'>" +
+                    "        <div class='col-md-7 col-sm-7 row'>" +
+                    "          <p>起始时间："+hw.begin_t +"</p>" +
+                    "          <p>截止时间："+hw.end_t   +"</p>" +
+                    "          <p>终止时间："+hw.hard_ddl+"</p>" +
+                    "        </div>" +
+                    "        <div class='col-md-5 col-sm-5 row'>" +
+                    "          <p>作业类型："+typeString+"</p>" +
+                    "          <p>作业比重：卷面分值<b>"+hw.score_face+"</b>，占总评分<b>"+parseInt(hw.score_weight*100)+"</b>分</p>" +
+                    "          <p>完成情况："+resultString+"</p>" +
+                    "        </div>" +
+                    "      </div>" +
+                    "</div>";
+
+            var type_int;
+            if(hw.type == 'F')
+                type_int = 0;
+            else if(hw.type == 'O')
+                type_int = 1;
+            else type_int = 2;
+            string = string +
+                    "    <div class='panel-footer' align='right' >" +
+                    "      </b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+                    "      <b class='textherf' onclick='jump_hw(" + hw.hid + "," + type_int + ")'>" +
+                    "        <span class='glyphicon glyphicon-edit'/>进入作业" +
+                    "      </b>" +
+                    "    </div>" +
+                    "  </div>";
+            return string;
+        }
+        function jump_hw(hid, type_int){
+            window.open("Course_Homework_detail.html?clid=" + clid + "&hid=" + hid + "&type=" + type_int);
+        }
+
+        function get_show_material_folder() {
+            $.ajax({
+                url:'Course_Material_list.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    tid: tid,
+                    coid: coid,
+                    dir: curr_dir
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    //if(data == "fail_no_connection" || data == "fail_select_error")
+                    //    alert("No connection!");
+                    if(data != "fail_no_material" && data != "fail_no_user") {
+                        mid_path = eval('(' + data.split("&&&")[0] + ')');
+                        refresh_mid_path();
+                        if(data.split("&&&")[1] == "fail_no_material"){
+                            materials = null;
+                            $("#material_list").empty();
+                        }
+                        else {
+                            materials = eval('(' + data.split("&&&")[1] + ')');
+                            sort_by('TYPE');
+                        }
+                        //var materialBlock = createMaterialBlock(data);
+                        //document.getElementById("materialList").innerHTML=materialBlock;
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+                complete:function(){
+                }
+            });
+        }
+        function sort_by(str) {
+            if (str == 'TYPE') {
+                if (sort_by_object[str] == true) {
+                    materials.sort(function (a, b) {
+                        if (a.type == 'FOLDER') return true;
+                        if (b.type == 'FOLDER') return false;
+                        return a.type < b.type;
+                    });
+                } else {
+                    materials.sort(function (a, b) {
+                        if (a.type == 'FOLDER') return false;
+                        if (b.type == 'FOLDER') return true;
+                        return a.type > b.type;
+                    });
+                }
+            } else if (str == 'NAME') {
+                if (sort_by_object[str] == true) {
+                    materials.sort(function (a, b) {
+                        return a.name < b.name;
+                    });
+                } else {
+                    materials.sort(function (a, b) {
+                        return a.name > b.name;
+                    });
+                }
+            } else if (str == 'SIZE') {
+                if (sort_by_object[str] == true) {
+                    materials.sort(function (a, b) {
+                        if (a.type == 'FOLDER') return true;
+                        if (b.type == 'FOLDER') return false;
+                        return a.size < b.size;
+                    });
+                } else {
+                    materials.sort(function (a, b) {
+                        if (a.type == 'FOLDER') return false;
+                        if (b.type == 'FOLDER') return true;
+                        return a.size > b.size;
+                    });
+                }
+            } else if (str == 'TIME') {
+                if (sort_by_object[str] == true) {
+                    materials.sort(function (a, b) {
+                        return a.upload_time < b.upload_time;
+                    });
+                } else {
+                    materials.sort(function (a, b) {
+                        return a.upload_time > b.upload_time;
+                    });
+                }
+            } else {
+                if (sort_by_object[str] == true) {
+                    materials.sort(function (a, b) {
+                        return a.download < b.download;
+                    });
+                } else {
+                    materials.sort(function (a, b) {
+                        return a.download > b.download;
+                    });
+                }
+            }
+            sort_by_object[str] = !sort_by_object[str];
+            show_materials();
+        }
+        function show_materials() {
+            $("#material_list").empty();
+            for (var i = 0; i < materials.length; i++)
+                addMaterial(materials[i]);
+        }
+        function refresh_mid_path() {
+            var html;
+            $("#mid_path").empty();
+            for (var i = mid_path.length - 1; i >= 0; i--) {
+                html = "<li><a class='textherf' onclick='select_material("+ mid_path[i].mid +",1)'>"+mid_path[i].name+"</a>";
+                $("#mid_path").append(html);
+            }
+        }
+        function addMaterial(m) {
+            var html;
+            if (m.type == "FOLDER" || m.type == "ROOT")
+                html = "<tr id='material_list_id_"+m.mid+"' class='warning'>";
+            else
+                html = "<tr id='material_list_id_"+m.mid+"'>";
+
+            if (m.type == "AUDIO")
+                html += '  <td>音频<span class="glyphicon glyphicon-music" style="color:#EBA300"></span></td>';
+            else if (m.type == "VIDEO")
+                html += '  <td>视频<span class="glyphicon glyphicon-film" style="color:#194E9C"></span></td>';
+            else if (m.type == "FOLDER" || m.type == "ROOT")
+                html += '  <td>目录<span class="glyphicon glyphicon-folder-open" style="color:#888888"></span></td>';
+            else if (m.type == "DOCUMENT")
+                html += '  <td>文档<span class="glyphicon glyphicon-file" style="color:#0DA068"></span></td>';
+            else if (m.type == "PICTURE")
+                html += '  <td>图片<span class="glyphicon glyphicon-picture" style="color:#3F3460"></span></td>';
+            else if (m.type == "RAR")
+                html += '  <td>压缩<span class="glyphicon glyphicon-th-large" style="color:#AE6E67"></span></td>';
+            else if (m.type == "EXE")
+                html += '  <td>程序<span class="glyphicon glyphicon-play" style="color:#C8D949"></span></td>';
+            else
+                html += '  <td>其他<span class="glyphicon glyphicon-globe" style="color:#ED5713"></span></td>';
+
+            html += "  <td class='name textherf' onclick='select_material("+m.mid+", 0)'>" + m.name + "</td>";
+            if (m.size == 0)
+                html += "  <td></td>";
+            else
+            if (m.size < 1024)
+                html += "  <td>" + m.size + "B</td>";
+            else if (m.size < 1024 * 1024)
+                html += "  <td>" + parseInt(m.size/1024) + "K</td>";
+            else
+                html += "  <td>" + parseInt(m.size/1024/1024) + "M</td>";
+            html += "  <td>" + m.uploadtime + "</td>";
+            if (m.type == "FOLDER" || m.type == "ROOT")
+                html += "  <td></td>";
+            else
+                html += "  <td>" + m.download + "</td>";
+
+            if(m.type == "FOLDER")
+                html += "  <td></td>";
+            else if(m.type == "AUDIO" || m.type == "VIDEO")
+                html += "  <td class='textherf' onclick='material_preview("+m.mid+")'>预览</td>";
+            else if(m.type == "DOCUMENT"){
+                if(m.name.indexOf(".pdf") != -1)
+                    html += "  <td class='textherf' onclick='material_preview("+m.mid+")'>预览</td>";
+                else html += "  <td>不支持预览</td>";
+            }
+            else html += "  <td>不支持预览</td>";
+            if(m.type != "FOLDER")
+                html += "  <td class='textherf' onclick='download_material("+m.mid+",0)'>下载</td>";
+            else html += "  <td></td>";
+            html += "</tr>";
+            $("#material_list").append(html);
+        }
+        function download_material(mid){
+            window.open("../course/material/student_download.php?mid="+mid);
+            get_show_material_folder();
+        }
+        function material_preview(mid){
+            window.open("../course/material/student_preview.php?mid="+mid);
+        }
+        function select_material(mid, ope) {
+            if(ope == 0) {
+                for (var i = 0; i < materials.length; i++)
+                    if (materials[i].mid == mid) {
+                        if (materials[i].type == 'FOLDER') {
+                            curr_dir = mid;
+                            get_show_material_folder();
+                        }
+                        else {
+                            download_material(mid);
+                        }
+                    }
+            }
+            else {
+                curr_dir = mid;
+                get_show_material_folder();
+            }
+        }
+    </script>
+
+</head>
+<body>
+<div class="container">
+    <div class="row clearfix">
+        <div class="container" id="div_bar">
+            <div class="row clearfix">
+                <div class="col-md-12 column">
+                    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                                <span class="sr-only">Toggle navigation</span>
+                            </button>
+                            <a class="navbar-brand" href="Course_list.html">首页<span class="glyphicon glyphicon-home"/></a>
+                        </div>
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                            <ul class="nav navbar-nav navbar-right">
+                                <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                                <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                                <li><a href="../common/infoModify/student_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                                <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+                            </ul>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        <!-- path-bar -->
+        <div class="container">
+            <div class="row clearfix">
+                <div class="col-md-12 column">
+                                <div>
+                        &nbsp
+                            </div>
+                                <div>
+                        &nbsp
+                            </div>
+                    <ul class="breadcrumb">
+                        <li>
+                            <a href="Course_list.html">首页</a>
+                        </li>
+                        <li class="active" id="current_course"></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- info -->
+        <div class="container" id="div_course">
+            <div class="row clearfix" id="course">
+                <div class="col-md-3 col-sm-4 col-xs-6 column">
+                    <blockquote class="pull-right">
+                        <h1 id="course_name"></h1>
+                        <p><text id="course_college"></text> <kbd id="course_cotype"></kbd></p>
+                        <p><b id="course_classes"></b></p>
+                    </blockquote>
+                </div>
+                <div class="col-md-9 col-sm-8 col-xs-6 column">
+                    <dl class="dl-horizontal" id="info_div"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- announcement -->
+        <div class="container">
+            <div class="panel-heading">
+                <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+                <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-cn">课程通知</a>
+            </div>
+        </div>
+        <div id="panel-element-cn" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="container">
+                    <div class="row clearfix" id="notice_div">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- group -->
+        <div class="container">
+            <div class="panel-heading">
+                <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+                <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-gr">课程小组</a>
+            </div>
+        </div>
+        <div id="panel-element-gr" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="container">
+                    <div class="row clearfix" id="group_div"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- homework -->
+        <div class="container">
+            <div class="panel-heading">
+                <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+                <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-hw">课程作业</a>
+            </div>
+        </div>
+        <div id="panel-element-hw" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="container">
+                    <div class="row clearfix" id="homework_div">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- resource -->
+        <div class="container">
+            <div class="panel-heading">
+                <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+                <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-rs">资源列表</a>
+            </div>
+        </div>
+        <div id="panel-element-rs" class="panel-collapse collapse">
+            <div class="panel-body">
+                <div class="container" id="div_show">
+                    <div class="row clearfix">
+                        <div class="col-md-12 column">
+                            <ul class="breadcrumb" id="mid_path"></ul>
+                        </div>
+                    </div>
+                    <div class="row clearfix">
+                        <div class="col-md-12 column">
+                            <table class="table">
+                                <thead class="data_list">
+                                <tr>
+                                    <th onclick="sort_by('TYPE')" class="textherf">类型</th>
+                                    <th onclick="sort_by('NAME')" class="textherf">文件名</th>
+                                    <th onclick="sort_by('SIZE')" class="textherf">大小</th>
+                                    <th onclick="sort_by('TIME')" class="textherf">上传时间</th>
+                                    <th onclick="sort_by('DOWN')" class="textherf">下载量</th>
+                                    <th>预览</th>
+                                    <th>下载</th>
+                                </tr>
+                                </thead>
+                                <tbody id="material_list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="view">
+            <div tabindex="-1" class="modal fade" id="modal-container-689251" role="dialog" aria-hidden="true" aria-labelledby="myModalLabel">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button class="close" aria-hidden="true" type="button" data-dismiss="modal">×</button>
+                            <h4 class="modal-title" id="myModalLabel" >创建小组</h4>
+                        </div>
+                        <div class="modal-body">
+                            <p>请输入小组名称：</p>
+                            <textarea id="groupNameInput" style='width:400px;height:20px;'></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" type="button" data-dismiss="modal">取消</button>
+                            <button class="btn btn-primary" type="button" onclick="create_group()">确认</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="src"></div>
+
+<div>
+    &nbsp
+</div>
+<div>
+    &nbsp
+</div>
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                

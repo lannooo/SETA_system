@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link href="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom styles for this template -->
+  <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+  <title></title>
+  <!--[if lt IE 9]>
+  <script src="http://apps.bdimg.com/libs/html5shiv/3.7/html5shiv.min.js"></script>
+  <![endif]-->
+  <link rel="shortcut icon" href="http://www.runoob.com/favicon.ico">
+
+  <style type="text/css">
+    .box {
+      filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#6699FF', endColorstr='#6699FF'); /*  IE */
+      background-image:linear-gradient(bottom, #6699FF 0%, #6699FF 100%);
+      background-image:-o-linear-gradient(bottom, #6699FF 0%, #6699FF 100%);
+      background-image:-moz-linear-gradient(bottom, #6699FF 0%, #6699FF 100%);
+      background-image:-webkit-linear-gradient(bottom, #6699FF 0%, #6699FF 100%);
+      background-image:-ms-linear-gradient(bottom, #6699FF 0%, #6699FF 100%);
+
+      margin: 0 auto;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .login-box {
+      width: 100%;
+      max-width:500px;
+      height: 500px;
+      position: absolute;
+      top: 50%;
+
+      margin-top: -200px;
+      /*设置负值，为要定位子盒子的一半高度*/
+
+    }
+    @media screen and (min-width:500px){
+      .login-box {
+        left: 50%;
+        /*设置负值，为要定位子盒子的一半宽度*/
+        margin-left: -250px;
+      }
+    }
+
+    .form {
+      width: 100%;
+      max-width:500px;
+      height: 275px;
+      margin: 25px auto 0px auto;
+      padding-top: 25px;
+    }
+    .login-content {
+      height: 400px;
+      width: 100%;
+      max-width:500px;
+      background-color: rgba(255, 250, 2550, .6);
+      float: left;
+    }
+
+
+    .input-group {
+      margin: 0px 0px 30px 0px !important;
+    }
+    .form-control,
+    .input-group {
+      height: 40px;
+    }
+
+    .form-group {
+      margin-bottom: 0px !important;
+    }
+    .login-title {
+      padding: 20px 10px;
+      background-color: rgba(0, 0, 0, .6);
+    }
+    .login-title h1 {
+      margin-top: 10px !important;
+    }
+    .login-title small {
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 8px 24px !important;
+      font-size: 16px !important;
+    }
+  </style>
+
+  <script type="text/javascript" src="http://cdn.staticfile.org/jquery/2.0.0/jquery.min.js"></script>
+  <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui/1.10.2/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="http://cdn.staticfile.org/jqueryui-touch-punch/0.2.2/jquery.ui.touch-punch.min.js"></script>
+  <script type="text/javascript" src="http://cdn.staticfile.org/twitter-bootstrap/3.0.1/js/bootstrap.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function(){
+      $("#login").on("click",function()
+      {
+        var username = $("#username").val();
+        var password = $("#password").val();
+        var group = $('#group input[name="group"]:checked ').val();
+
+        var data = {};
+        data.username = username;
+        data.password = password;
+        data.group = group;
+
+        var url = "login.php";
+
+        console.log(data);
+        $.ajax({
+          type: 'post',
+          dataType: "json",
+          data: JSON.stringify(data),
+          url: url,
+          contentType : "application/text",
+          success: function (data) {
+            if (data.code == 200) {
+              if(group == "student")
+                window.location.href="../../student/Course_list.html";
+              if(group == "teacher")
+                window.location.href="../../teacher/teacher-center.html";
+              if(group == "ta_assist")
+                window.location.href="../../teacher/teacher-center.html";
+            } else if(data.code == 1){
+              $("#loginResult").text("用户名密码不正确");
+              $("#loginResult").css("color", "#FF0000");
+            }
+            else{
+              $("#loginResult").text("不存在该用户");
+              $("#loginResult").css("color", "#FF0000");
+            }
+
+          },
+          error: function (data) {
+            alert("ajax传输失败！");
+          }
+        });
+      });
+    });
+
+  </script>
+</head>
+<body>
+<div class="container">
+  <div class="row clearfix">
+    <div class="col-md-12 column">
+      <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"> <span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button> <a class="navbar-brand" href="#">Brand</a>
+        </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+          <ul class="nav navbar-nav">
+            <li class="active">
+              <a href="#">Link</a>
+            </li>
+            <li>
+              <a href="#">Link</a>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown<strong class="caret"></strong></a>
+              <ul class="dropdown-menu">
+                <li>
+                  <a href="#">Action</a>
+                </li>
+                <li>
+                  <a href="#">Another action</a>
+                </li>
+                <li>
+                  <a href="#">Something else here</a>
+                </li>
+                <li class="divider">
+                </li>
+                <li>
+                  <a href="#">Separated link</a>
+                </li>
+                <li class="divider">
+                </li>
+                <li>
+                  <a href="#">One more separated link</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <form class="navbar-form navbar-left" role="search">
+            <div class="form-group">
+              <input type="text" class="form-control" />
+            </div> <button type="submit" class="btn btn-default">Submit</button>
+          </form>
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <a href="#">Link</a>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown<strong class="caret"></strong></a>
+              <ul class="dropdown-menu">
+                <li>
+                  <a href="#">Action</a>
+                </li>
+                <li>
+                  <a href="#">Another action</a>
+                </li>
+                <li>
+                  <a href="#">Something else here</a>
+                </li>
+                <li class="divider">
+                </li>
+                <li>
+                  <a href="#">Separated link</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </div>
+</div>
+<div class="container">
+  <div class="login-box">
+    <div class="login-title text-center">
+      <h1><small>登录</small></h1>
+    </div>
+    <div class="login-content " style="background:cadetblue;opacity:0.45;">
+      <div class="form">
+        <form action="#" method="post">
+          <div class="form-group">
+            <div class="col-xs-12  ">
+              <div class="input-group">
+                <span class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span>
+                <input type="text" id="username" name="username" class="form-control" placeholder="用户名">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-xs-12  ">
+              <div class="input-group">
+                <span class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></span>
+                <input type="password" id="password" name="password" class="form-control" placeholder="密码">
+              </div>
+              <p> &nbsp&nbsp&nbsp&nbsp<span id="loginResult"></span></p>
+            </div>
+          </div>
+          <div class="form-group foractions">
+            <div class="col-sm-offset-2 col-sm-10">
+              <div class="radio" id="group">
+                <input type="radio" id="group_1", name="group", value="teacher" >我是老师<br>
+                <input type="radio" id="group_2", name="group", value="student">我是学生<br>
+                <input type="radio" id="group_3", name="group", value="ta_assist">我是助教
+              </div>
+            </div>
+          </div>
+          <div class="form-group form-actions">
+            <div align="center">
+              <button type="button" class="btn btn-sm btn-info" id="login">登录</button>
+              <button type="button" class="btn btn-sm btn-info" id="return" onclick="location='../../'">返回</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-xs-6 link">
+              <p class="text-center remove-margin"><small>忘记密码？</small> <a href="../register/register.html"><small>找回</small></a>
+              </p>
+            </div>
+            <div class="col-xs-6 link">
+              <p class="text-center remove-margin"><small>还没注册?</small> <a href="../passwordModify/find_pwd.html"><small>注册</small></a>
+              </p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

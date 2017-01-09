@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      /*#chartData{width:220px;margin:0 40px 0 0;float:right;border-collapse:collapse;box-shadow:0 0 1em rgba(0, 0, 0, 0.5);-moz-box-shadow:0 0 1em rgba(0, 0, 0, 0.5);-webkit-box-shadow:0 0 1em rgba(0, 0, 0, 0.5);background-position:0 -100px;}
+      #chartData th, #chartData td{padding:0.5em;border:1px dotted #666;text-align:left;}*/
+      .textherf {cursor: pointer;}
+    </style>
+    <script>
+      function postJSON(url, jsonStr, successFunction, async=true, dataType="json", contentType="application/text") {
+        $.ajax({
+          url : url,
+          type : 'POST',
+          async : async,
+          data : jsonStr,
+          processData : false,
+          dataType : dataType,
+          contentType : contentType,
+          success : function(response, status, xhr) {
+            var response;
+            if (dataType != "json")
+              response = $.parseJSON(response);
+            if (status != "success")
+              alert("未知错误");
+            else if (response['code'] != 0)
+              alert("错误"+response['code']+"："+response['msg']);
+            else successFunction(response);
+          },
+          error : function(xhr, error, exception) {
+              // handle the error.
+              alert(exception.toString());
+          }
+        });
+      }
+      function getCookie(cname)
+      {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+          var c = ca[i].trim();
+          if (c.indexOf(name) == 0)
+            return c.substring(name.length, c.length);
+        }
+        return "";
+      }
+    </script>
+  	<script>
+      function selectClass(clid) {
+        self.location = "class.html?clid=" + clid;
+      }
+      function addClass(coname, clid, cltime, place, student_num) {
+        html = '';
+        html += '<div class="col-md-4 col-sm-6 column" style="margin:10px">';
+        html += '  <h4><b>课程：' + coname + '</b></h4>';
+        html += '  <h4><b>时间：' + cltime + '</b></h4>';
+        html += '  <h4><b>地点：' + place + '</b></h4>';
+        html += '  <h4><b>人数：' + student_num + '</b></h4>';
+        // html += '  <p id="panel">' + text + '</p>';
+        html += '  <a class="btn btn-primary btn-block" onclick="selectClass(' + clid + ')">点击进入</a>';
+        html += '</div>';
+        $("#classes").append(html);
+      }
+      function getRequest() {
+        var url = window.location.search;
+        var theRequest = new Object();
+        if (url.indexOf("?") == 0) {
+          var str = url.substr(1);
+          strs = str.split("&");
+          // return strs[0].split("=")[1];
+          for (var i = 0; i < strs.length; i++)
+            theRequest[strs[i].split("=")[0]] = strs[0].split("=")[1];
+        }
+        return theRequest;
+      }
+      function delete_notice_btn() {
+        if (current_announcement == -1)
+          return;
+        var req = {anid: current_announcement};
+        postJSON("../course/notice/delete.php", $.toJSON(req), function showResponse(response) {
+          get_show_notice();
+        });
+      }
+      function modify_notice_btn() {
+        if (current_announcement == -1)
+          return;
+
+        var req = {
+          title: $("#notice-title").val(),
+          content: $("#notice-content").val(),
+          type: $("#notice-emergency").is(":checked") ? 'e' : 'n'
+        };
+        var url;
+        if (current_announcement == -0xff) {
+          url = "../course/notice/publish.php";
+          req.coid = coid;
+        }
+        else {
+          url = "../course/notice/modify.php";
+          req.anid = current_announcement;
+        }
+        postJSON(url, $.toJSON(req), function showResponse(response) {
+          get_show_notice();
+        });
+      }
+      function publish_notice() {
+        current_announcement = -0xff;
+        $("#modify-block").text("发布课程通知");
+        $("#delete_btn").attr("disabled", true);
+        $("#notice-title").val("");
+        $("#notice-content").val("");
+        $("#modify_btn").attr("disabled", false);
+        $("#notice-emergency").attr("checked", false);
+      }
+      function modify_notice(anid) {
+        for (var i = 0; i < announcements.length; i++)
+          if (announcements[i].anid == anid) {
+            current_announcement = anid;
+            if (getCookie("type") == "teacher")
+              $("#delete_btn").attr("disabled", false);
+            if (getCookie("type") == "TA" && pmts.p_nt_modify == 0)
+              $("#modify_btn").attr("disabled", true);
+            $("#modify-block").text("修改课程通知");
+            $("#notice-title").val(announcements[i].title);
+            $("#notice-content").val(announcements[i].content);
+            $("#notice-emergency").attr("checked", announcements[i].type =='e');
+            return;
+          }
+        current_announcement = -1;
+      }
+      function addAnnouncement(an) {
+        var type;
+        if (an.type == 'e')
+          type = 'danger';
+        else
+          type = 'info';
+        http =  '<div class="col-md-12 column textherf" onclick="modify_notice('+an.anid+')">'
+        http += '  <div class="alert alert-success alert-'+type+' textherf" data-toggle="modal" href="#modal-container-modify-notice"">';
+        // http += '    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>';
+        http += '    <h4>' + an.title + '<small>[' + an.adate + ']</small></h4>';
+        http += '    <strong>' + an.content + '</strong>';
+        http += '  </div>';
+        http += '</div>';
+        $("#div_show").append(http);
+      }
+      function addMaterial(m) {
+        var html;
+        if (m.type == "FOLDER" || m.type == "ROOT")
+          html = "<tr id='material_list_id_"+m.mid+"' class='warning'>";
+        else
+          html = "<tr id='material_list_id_"+m.mid+"'>";
+
+        if (m.type == "AUDIO")
+          html += '  <td>音频<span class="glyphicon glyphicon-music" style="color:#EBA300"></span></td>';
+        else if (m.type == "VIDEO")
+          html += '  <td>视频<span class="glyphicon glyphicon-film" style="color:#194E9C"></span></td>';
+        else if (m.type == "FOLDER" || m.type == "ROOT")
+          html += '  <td>目录<span class="glyphicon glyphicon-folder-open" style="color:#888888"></span></td>';
+        else if (m.type == "DOCUMENT")
+          html += '  <td>文档<span class="glyphicon glyphicon-file" style="color:#0DA068"></span></td>';
+        else if (m.type == "PICTURE")
+          html += '  <td>图片<span class="glyphicon glyphicon-picture" style="color:#3F3460"></span></td>';
+        else if (m.type == "RAR")
+          html += '  <td>压缩<span class="glyphicon glyphicon-th-large" style="color:#AE6E67"></span></td>';
+        else if (m.type == "EXE")
+          html += '  <td>程序<span class="glyphicon glyphicon-play" style="color:#C8D949"></span></td>';
+        else
+          html += '  <td>其他<span class="glyphicon glyphicon-globe" style="color:#ED5713"></span></td>';
+
+        html += "  <td class='name textherf' onclick='select_material("+m.mid+")'>" + m.name + "</td>";
+        if (m.size == 0)
+          html += "  <td></td>";
+        else
+        if (m.size < 1024)
+          html += "  <td>" + m.size + "B</td>";
+        else if (m.size < 1024 * 1024)
+          html += "  <td>" + parseInt(m.size/1024) + "K</td>";
+        else
+          html += "  <td>" + parseInt(m.size/1024/1024) + "M</td>";
+        html += "  <td>" + m.upload_time + "</td>";
+        if (m.type == "FOLDER" || m.type == "ROOT")
+          html += "  <td></td>";
+        else
+          html += "  <td>" + m.download + "</td>";
+        html += "  <td class='textherf' onclick='edit_material("+m.mid+")'>重命名</td>";
+        html += "  <td class='textherf' onclick='delete_material("+m.mid+")'>删除</td>";
+        html += "</tr>";
+        $("#material_list").append(html);
+      }
+      function refresh_mid_path() {
+        var html;
+        $("#mid_path").empty();
+        for (var i = 0; i < mid_path.length; i++) {
+          html = "<li><a class='textherf' onclick='select_mid_from_path("+mid_path[i].mid+")'>"+mid_path[i].name+"</a>";
+          $("#mid_path").append(html);
+        }
+      }
+      function get_show_material_folder() {
+        var req = {father: current_mid, coid: coid};
+        postJSON("../course/material/list.php", $.toJSON(req), function showResponse(response) {
+          materials = response.body.info;
+          sort_by_object['TYPE'] = false;
+          sort_by('TYPE', false);
+        });
+      }
+      function upload_material() {
+        var fileData = $("#file_uploading");
+        if (fileData.val() == "") {
+          alert("请选择文件后再点击上传");
+          return;
+        }
+        var formData = new FormData();
+        formData.append("file[]", fileData[0].files[0]);
+        formData.append("mid", current_mid);
+        formData.append("coid", coid);
+        fileData.val(null);
+        postJSON('../course/material/upload.php', formData, function showResponse(response) {
+          // $("#modal-container-upload").css("display", "none");
+          get_show_material_folder();
+        }, true, "", false);
+      }
+      function delete_material(mid) {
+        var name = $("#material_list_id_"+mid+" .name").text();
+        if (confirm("是否确认删除 "+name+" ？")) {
+          req = {mid: mid};
+          postJSON("../course/material/delete.php", $.toJSON(req), function showResponse(response) {
+            get_show_material_folder();
+          });
+        }
+      }
+      function edit_material(mid) {
+        var modify_data, ext_data, i;
+        for (i = 0; i < materials.length; i++)
+          if (materials[i].mid == mid) {
+            if (materials[i].type == "FOLDER") {
+              modify_data = materials[i].name;
+              ext_data = "";
+            } else {
+              var find = materials[i].name.lastIndexOf('.');
+              if (find == -1) {
+                modify_data = materials[i].name;
+                ext_data = "";
+              } else {
+                modify_data = materials[i].name.substring(0, find);
+                ext_data = materials[i].name.substring(find);
+              }
+            }
+            break;
+          }
+        if (i == materials.length)
+          return;
+        var name = prompt("请输入资源新名称", modify_data);
+        if (name == "") {
+          alert("资源名称不能为空");
+          return;
+        }
+        if (name != null) {
+          req = {mid: mid, new_name: name+ext_data};
+          postJSON("../course/material/rename.php", $.toJSON(req), function showResponse(response) {
+            get_show_material_folder();
+          });
+        }
+      }
+      function add_folder_material() {
+        var folder_name = $("#folder_name").val();
+        if (folder_name == "") {
+          alert("子目录名不能为空");
+          return;
+        }
+        $("#folder_name").val("");
+        var req = {"mid": current_mid, "folder_name": folder_name, "coid": coid};
+        postJSON('../course/material/addFolder.php', $.toJSON(req), function showResponse(response) {
+          get_show_material_folder();
+        });
+      }
+      function select_mid_from_path(mid) {
+        var length = mid_path.length;
+        while (length > 1 && mid_path[length-1].mid != mid) {
+          mid_path.pop();
+          length = mid_path.length;
+        }
+        refresh_mid_path();
+        current_mid = mid;
+        get_show_material_folder();
+      }
+      function select_material(mid) {
+        for (var i = 0; i < materials.length; i++)
+          if (materials[i].mid == mid) {
+            if (materials[i].type == 'FOLDER') {
+              current_mid = mid;
+              get_show_material_folder();
+              mid_path.push({mid: current_mid, name: materials[i].name});
+              refresh_mid_path();
+            }
+            else {
+              window.open("../course/material/download.php?mid="+mid);
+            }
+          }
+      }
+      function show_materials() {
+        $("#material_list").empty();
+        for (var i = 0; i < materials.length; i++)
+              addMaterial(materials[i]);
+      }
+      function sort_by(str, reverse=true) {
+        if (reverse)
+          sort_by_object[str] = !sort_by_object[str];
+        if (str == 'TYPE') {
+          if (sort_by_object[str] == true) {
+            materials.sort(function(a, b) { if (a.type == 'FOLDER') return true; if (b.type == 'FOLDER') return false; return a.type < b.type; });
+          } else {
+            materials.sort(function(a, b) { if (a.type == 'FOLDER') return false; if (b.type == 'FOLDER') return true; return a.type > b.type; });
+          }
+        } else if (str == 'NAME') {
+          if (sort_by_object[str] == true) {
+            materials.sort(function(a, b) { return a.name < b.name; });
+          } else {
+            materials.sort(function(a, b) { return a.name > b.name; });
+          }
+        } else if (str == 'SIZE') {
+          if (sort_by_object[str] == true) {
+            materials.sort(function(a, b) { if (a.type == 'FOLDER') return true; if (b.type == 'FOLDER') return false; return a.size < b.size; });
+          } else {
+            materials.sort(function(a, b) { if (a.type == 'FOLDER') return false; if (b.type == 'FOLDER') return true; return a.size > b.size; });
+          }
+        } else if (str == 'TIME') {
+          if (sort_by_object[str] == true) {
+            materials.sort(function(a, b) { return a.upload_time < b.upload_time; });
+          } else {
+            materials.sort(function(a, b) { return a.upload_time > b.upload_time; });
+          }
+        } else {
+          if (sort_by_object[str] == true) {
+            materials.sort(function(a, b) { return a.download < b.download; });
+          } else {
+            materials.sort(function(a, b) { return a.download > b.download; });
+          }
+        }
+        show_materials();
+      }
+      function get_show_tapmt() {
+        postJSON("../course/ta/getPermissionByTA.php", "{}", function showResponse(response) {
+          pmts = response.body;
+          if (pmts.p_nt_deliver == 0)
+            $("#publish_notice_btn").attr("disabled", true);
+          if (pmts.p_nt_delete == 0)
+            $("#delete_btn").attr("disabled", true);
+          if (pmts.p_ma_upload == 0) {
+            $("#upload_btn").attr("disabled", true);
+            $("#add_folder_btn").attr("disabled", true);
+          }
+        });
+      }
+      function get_show_notice() {
+        var req = {coid: coid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/notice/list.php", jsonStr, function showResponse(response) {
+          $("#div_show").empty();
+          announcements = response.body.info;
+          announcements.sort(function(a, b) { 
+            if (a.type == b.type) {
+              if (a.atime < b.atime)
+                return false;
+              else 
+                return true;
+            } else {
+              if (a.type == 'e') 
+                return false;
+              else
+                return true;
+            }
+            
+            // return a.type < b.type; 
+          });
+
+          for (var i = 0; i < announcements.length; i++)
+            addAnnouncement(announcements[i]);
+        });
+      }
+      function addInfo(title, content) {
+        if (content == null || content == "")
+          content = "暂无数据";
+        var content_str;
+        if (content.length > 40)
+          content_str = content.substring(0, 39) + "…";
+        else
+          content_str = content;
+        var html = '<text><dt id="title">' + title + '</dt><dd id="content">' + content_str + '</dd></text>';
+        $("#course #info").append(html);
+      }
+    </script>
+    <script>
+      $(document).ready(function(){
+        var request = getRequest();
+        coid = request.coid;
+        if (coid == undefined)
+          return;
+        if (getCookie("type") == "TA")
+          get_show_tapmt();
+        var request = {coid: coid};
+        var jsonStr = $.toJSON(request);
+        sort_by_object = {'TYPE': true, 'NAME': true, 'SIZE': true, 'TIME': true, 'DOWN': true};
+
+        get_show_notice();
+        postJSON("course.php", jsonStr, function showResponse(response) {
+          // var req = {father: response.body.material_statics.root_mid};
+          // postJSON("/course/material/list.php", $.toJSON(req), function showResponse(response) {
+          //   materials = response.body.info;
+          //   sort_by('TYPE');
+          // });
+          current_mid = response.body.root_mid;
+          mid_path = new Array();
+          mid_path.push({mid: current_mid, name: "根目录"});
+          refresh_mid_path();
+
+          get_show_material_folder();
+
+          var course_info = response.body.course_info;
+          var classes = response.body.classes;
+          $("#course #course_name").text(course_info.coname);
+          $("#course #course_college").text(course_info.college);
+          $("#course #course_cotype").text(course_info.cotype);
+          if (getCookie("type") == "teacher")
+            $("#course #course_classes").text(getCookie("name")+"教师，您开设了"+classes.length+"个班级");
+          else
+            $("#course #course_classes").text(getCookie("name")+"助教，您可管理"+classes.length+"个班级");
+          
+          addInfo("", " ");
+          addInfo("课程名称", course_info.college+"-"+course_info.coname+"("+course_info.coname_en+", "+course_info.cocode+"-"+course_info.semster+")");
+          addInfo("课程背景", course_info.background);
+          addInfo("教学计划", course_info.plan);
+          addInfo("项目介绍", course_info.project_info);
+          addInfo("教材课本", course_info.textbook);
+          addInfo("其他", "周学时 "+course_info.week_learn_time+"("+course_info.weight+")， 学分 "+course_info.credit);
+          var html = '<a class="btn pull-right" href="../student/Course_detail.html?coid='+coid+'">查看更多 »</a>';
+          $("#course #info").append(html)
+
+          for (var i = 0; i < classes.length; i++)
+            addClass(course_info.coname, classes[i].clid, classes[i].cltime, classes[i].place, classes[i].student_num);
+          $("#current_course").text(course_info.coname);
+          // $("#chartData #word").text(3435);
+          // $("#chartData #video").text(3098);
+          // $("#chartData #audio").text(7232);
+          // $("#chartData #other").text(2344);
+          // new pieChart();
+        });
+      });
+  	</script>
+  </head>
+  <body>
+    <!-- top-bar -->
+    <div class="container" id="div_bar">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+              </button> 
+              <a class="navbar-brand" href="teacher-center.html">首页<span class="glyphicon glyphicon-home"/></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                <li><a href="../common/infoModify/teacher_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- path-bar -->
+    <div class="container">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <ul class="breadcrumb">
+            <li>
+               <a href="../teacher/teacher-center.html">首页</a>
+            </li>
+            <li class="active" id="current_course"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- info -->
+    <div class="container" id="div_course">
+      <div class="row clearfix" id="course">
+        <div class="col-md-3 col-sm-4 col-xs-6 column">
+          <blockquote class="pull-right">
+            <h1 id="course_name"></h1>
+            <p><text id="course_college"></text> <kbd id="course_cotype"></kbd></p>
+            <p><b id="course_classes"></b></p>
+          </blockquote>
+        </div>
+        <div class="col-md-9 col-sm-8 col-xs-6 column">
+          <dl class="dl-horizontal" id="info"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- announcement -->
+    <div class="container">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-cn">课程通知</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-cn" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container">
+          <!-- <blockquote><h3>课程通知</h3></blockquote> -->
+          <div class="row clearfix" id="div_show">
+          </div>
+          <button class="col-md-2 col-md-offset-10 col-sm-4 col-sm-offset-8 col-xs-6 btn btn-primary" data-toggle="modal" href="#modal-container-modify-notice" onclick="publish_notice()" id="publish_notice_btn">发布课程通知</button>
+          
+<!--           <a class="col-md-2 col-md-offset-10 col-sm-4 col-sm-offset-8 col-xs-6 btn btn-primary" data-toggle="modal" href="#modal-container-modify-notice" onclick="publish_notice()" id="publish_notice_btn">发布课程通知</a> -->
+        </div>
+      </div>
+    </div>
+
+
+    <!-- class -->
+    <div class="container">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-cl">我的班级</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-cl" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container" id="div_show">
+          <!-- <blockquote><h3>我的班级</h3></blockquote> -->
+          <div class="row clearfix" id="classes"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- resource -->
+    <div class="container">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-rs">资源列表</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-rs" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container" id="div_show">
+          <!-- <blockquote><h3>资源列表</h3></blockquote> -->
+          <div class="row clearfix">
+            <div class="col-md-12 column">
+              <ul class="breadcrumb" id="mid_path"></ul>
+            </div>
+          </div>
+          <div class="row clearfix">
+            <div class="col-md-12 column">
+              <table class="table">
+                <thead class="data_list">
+                  <tr>
+                    <th onclick="sort_by('TYPE')" class="textherf">类型</th>
+                    <th onclick="sort_by('NAME')" class="textherf">文件名</th>
+                    <th onclick="sort_by('SIZE')" class="textherf">大小</th>
+                    <th onclick="sort_by('TIME')" class="textherf">上传时间</th>
+                    <th onclick="sort_by('DOWN')" class="textherf">下载量</th>
+                    <th>重命名</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+                <tbody id="material_list"></tbody>
+              </table>
+              <button type="button" class="btn btn-primary col-md-1 col-md-offset-9" data-toggle="modal" href="#modal-container-upload" id="upload_btn">上传</button>
+              <button type="button" class="btn btn-primary col-md-1 col-md-offset-1" data-toggle="modal" href="#modal-container-addFolder" id="add_folder_btn">添加子目录</button>
+
+              <!-- <a class="col-md-1 col-md-offset-9 col-sm-2 col-sm-offset-5 col-xs-6 btn btn-primary" data-toggle="modal" href="#modal-container-upload" id="upload_btn">上传</a> -->
+              <!-- <a class="col-md-1 col-md-offset-1 col-sm-2 col-sm-offset-2 col-xs-6 btn btn-primary" data-toggle="modal" href="#modal-container-addFolder" id="add_folder_btn">添加子目录</a> -->
+              <div class="modal fade" id="modal-container-upload" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                      <div class="modal-content">
+                          <div class="modal-header">
+                               <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                              <h4 class="modal-title" id="myModalLabel">
+                                  上传课程资源
+                              </h4>
+                          </div>
+                          <div class="modal-body">
+                              <input id="file_uploading" type="file" name="file[]" value=""/>
+                          </div>
+                          <div class="modal-footer">
+                               <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button> 
+                               <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="upload_material()">上传</button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div class="modal fade" id="modal-container-addFolder" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                      <h4 class="modal-title" id="myModalLabel">添加子目录</h4>
+                    </div>
+                    <div class="modal-body">子目录名：<input id="folder_name" type="text" value=""/></div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button> 
+                      <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="add_folder_material()">添加</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+    <div class="modal fade" id="modal-container-modify-notice" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">修改课程通知</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">标题</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="notice-title" /></div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">内容</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="notice-content"/></div>
+              </div> 
+              <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                  <div class="checkbox">
+                    <label><input type="checkbox" id="notice-emergency"/>重要</label>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" id="delete_btn" onclick="delete_notice_btn()">删除</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" id="modify_btn"  onclick="modify_notice_btn()">提交</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </body>
+</html>

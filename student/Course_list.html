@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统-我的课程</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+        #panel {
+            padding:5px;
+            text-align:left;
+            background-color:#eee;
+            border:solid 1px #c3c3c3;
+            height: 108px;
+            overflow-y: hidden;
+        }
+        .large_font {
+            font-size: 80px;
+            font:;
+        }
+        .meduim_font {
+            font-size: 60px;
+        }
+    </style>
+    <script>
+        $(document).ready(function(){
+            $.ajax({
+                url:'Course_list.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    if(data == "fail_no_connection" || data == "fail_select_error")
+                        alert("没有登陆的学生!");
+                    else if(data != "fail_no_course"){
+                        var courseBlock = createCourseBlock(data);
+                        document.getElementById("courseList").innerHTML = courseBlock;
+
+                        var oDate = new Date();
+                        if (oDate.getHours() < 6)
+                            $("#greet").text("。注意休息，深夜好！");
+                        else if (oDate.getHours() < 8)
+                            $("#greet").text("。新的一天，清晨好！");
+                        else if (oDate.getHours() < 12)
+                            $("#greet").text("。新的一天，上午好！");
+                        else if (oDate.getHours() < 14)
+                            $("#greet").text("。新的一天，中午好！");
+                        else if (oDate.getHours() < 17)
+                            $("#greet").text("。新的一天，下午好！");
+                        else if (oDate.getHours() < 19)
+                            $("#greet").text("。新的一天，黄昏好！");
+                        else if (oDate.getHours() < 23)
+                            $("#greet").text("。新的一天，晚上好！");
+                        else
+                            $("#greet").text("，注意休息，深夜好！");
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("Error!");
+                },
+                complete:function(){
+                }
+            })
+        });
+    </script>
+    <script language="javascript">
+        function createCourseBlock(data){
+            document.getElementById("name").innerHTML = data.split("&&&")[0];
+            document.getElementById("type").innerHTML = "同学";
+            var obj = eval(data.split("&&&")[1]);
+            var courseBlock = "";
+            for(var i = 0; i < obj.length; i++){
+                courseBlock = courseBlock + singleCourseString(obj[i].coname, obj[i].college, obj[i].cotype, obj[i].plan, obj[i].tid, obj[i].coid, obj[i].clid);
+            }
+            return courseBlock;
+        }
+        function singleCourseString(coname, college, cotype, plan, tid, coid, clid){
+            var string = "";
+            string = string +
+                    "<div class='col-md-4 col-sm-6 column'>" +
+                    "  <h4 align='center'><b>" + college + " " + cotype + "</b></h4>" +
+                    "  <h2><a class='btn btn-primary btn-block' onclick='jump(" + tid + "," + coid + "," + clid + ")'>" + coname + "</a></h2>" +
+                    "  <p id='panel'>" + plan + "</p>" +
+                    "</div>";
+            /*
+            string = string +
+                    "<div class='panel panel-primary'>" +
+                    "<div class='panel-heading'>" + coname + "</div> " +
+                    "<div class='panel-body'> " +
+                    "<div class='col-xs-4'> " +
+                    "<p><strong>内容：</strong>" + "balabala" + "</p> " +
+                    "</div> " +
+                    "<div class='col-xs-4'> " +
+                    "<p><strong>任课教师：</strong>" + tname + "</p> " +
+                    "</div> " +
+                    "<div class='col-xs-1'> " +
+                    "<button class='btn btn-default' contenteditable='true' type='button' onclick='jump(" + coid + ",0,0)'>课程信息</button> " +
+                    "</div> "+
+                    "<div class='col-xs-1'> " +
+                    "<button class='btn btn-default' contenteditable='true' type='button' onclick='jump(" + tid + ",1,0)'>教师信息</button> " +
+                    "</div> "+
+                    "<div class='col-xs-1'> " +
+                    "<button class='btn btn-default' contenteditable='true' type='button' onclick='jump(" + tid + ",2," + coid + ")'>课程通知</button> " +
+                    "</div> "+
+                    "<div class='col-xs-1'> " +
+                    "<button class='btn btn-default' contenteditable='true' type='button' onclick='jump(" + tid + ",3," + coid + ")'>课程资料</button> " +
+                    "</div> "+
+                    "</div>" +
+                    "</div> ";
+                    */
+            return string;
+        }
+        function jump(tid, coid, clid){
+            window.location.href="Course_main.html?tid=" + tid + "&coid=" + coid + "&clid=" + clid;
+        }
+    </script>
+</head>
+<body>
+<div class="container" id="div_bar">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                    </button>
+                    <a class="navbar-brand" href="Course_list.html">首页<span class="glyphicon glyphicon-home"/></a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                        <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                        <li><a href="../common/infoModify/student_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                        <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+            <div class="container" id="div_greet">
+                <div class="row clearfix">
+                    <div class="col-md-12 column">
+                    <div>
+                        &nbsp
+                            </div>
+                            <div>
+                        &nbsp
+                            </div>
+                        <div class="jumbotron">
+                            <h1><text id="name" ></text>
+                            <text id="type" ></text>
+                            <text id="greet"></text></h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container" id="div_show">
+                <blockquote><h3>我的课程</h3></blockquote>
+                <div class="row clearfix" id="courses"></div>
+                <div id="courseList"></div>
+            </div>
+<div>
+    &nbsp
+</div>
+<div>
+    &nbsp
+</div>
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统-我的课程</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      #panel {
+        padding:5px;
+        text-align:left;
+        background-color:#eee;
+        border:solid 1px #c3c3c3;
+        height: 108px;
+        overflow-y: hidden;
+      }
+      .large_font {
+        font-size: 80px;
+        font:;
+      }
+      .meduim_font {
+        font-size: 60px;
+      }
+    </style>
+    <script>
+      function postJSON(url, jsonStr, successFunction, async=true) {
+        $.ajax({
+          url : url,
+          type : 'POST',
+          data : jsonStr,
+          async: async,
+          dataType : 'json',
+          contentType : 'application/text',
+          success : function(response, status, xhr) {
+            if (status != "success")
+              alert("未知错误");
+            else if (response['code'] != 0)
+              alert("错误"+response['code']+"："+response['msg']);
+            else successFunction(response);
+          },
+          error : function(xhr, error, exception) {
+              // handle the error.
+              alert(exception.toString());
+          }
+        });
+      }
+      function getCookie(cname)
+      {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+          var c = ca[i].trim();
+          if (c.indexOf(name) == 0)
+            return c.substring(name.length, c.length);
+        }
+        return "";
+      }
+      function selectCourse(coid) {
+        self.location = "course.html?coid=" + coid;
+      }
+      function addCourse(coname, college, cotype, plan, coid) {
+        html = '';
+        html += '<div class="col-md-4 col-sm-6 column">';
+        html += '  <h4 align="center"><b>' + college + " " + cotype + '</b></h4>';
+        html += '  <h2><a class="btn btn-primary btn-block" onclick="selectCourse(' + coid + ')">' + coname + '</a></h2>';
+        html += '  <p id="panel">' + plan + '</p>';
+        html += '</div>';
+        $("#courses").append(html);
+      }
+    </script>
+  	<script>
+      $(document).ready(function() {
+        var request = {};
+        var jsonStr = $.toJSON(request);
+        postJSON("info.php", jsonStr, function showResponse(response) {
+          $("#courses").empty();
+          var courses = response.body.courses;
+          for (var i = 0; i < courses.length; i++) {
+            addCourse(courses[i].coname, courses[i].college, courses[i].cotype, courses[i].plan, courses[i].coid);
+          }
+
+          $("#name").text(response.body.name);
+          if (response.body.type == "teacher")
+            $("#type").text("教师");
+          else
+            $("#type").text("助教");
+
+          var oDate = new Date();
+          if (oDate.getHours() < 6)
+            $("#greet").text("。注意休息，深夜好！");
+          else if (oDate.getHours() < 8)
+            $("#greet").text("。新的一天，清晨好！");
+          else if (oDate.getHours() < 12)
+            $("#greet").text("。新的一天，上午好！");
+          else if (oDate.getHours() < 14)
+            $("#greet").text("。新的一天，中午好！");
+          else if (oDate.getHours() < 17)
+            $("#greet").text("。新的一天，下午好！");
+          else if (oDate.getHours() < 19)
+            $("#greet").text("。新的一天，黄昏好！");
+          else if (oDate.getHours() < 23)
+            $("#greet").text("。新的一天，晚上好！");
+          else
+            $("#greet").text("，注意休息，深夜好！");
+          document.cookie="name="+response.body.name;
+          document.cookie="type="+response.body.type;
+        });
+      });
+  	</script>
+  </head>
+  <body>
+    <div class="container" id="div_bar">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+              </button> 
+              <a class="navbar-brand" href="teacher-center.html">首页<span class="glyphicon glyphicon-home"/></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                <li><a href="../common/infoModify/teacher_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+    <div class="container" id="div_greet">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <div class="jumbotron">
+            <text id="name" class="meduim_font"></text>
+            <text id="type" class="meduim_font"></text>
+            <text id="greet" class="meduim_font"></text>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container" id="div_show">
+      <blockquote><h3>我的课程</h3></blockquote>
+      <div class="row clearfix" id="courses"></div>
+    </div>
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+  </body>
+</html>

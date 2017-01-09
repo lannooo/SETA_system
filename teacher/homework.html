@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>教学辅助系统</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      .textherf {cursor: pointer;}
+    </style>
+    <script>
+      function postJSON(url, jsonStr, successFunction, async=true, dataType="json", contentType="application/text") {
+        $.ajax({
+          url : url,
+          type : 'POST',
+          async : async,
+          data : jsonStr,
+          processData : false,
+          dataType : dataType,
+          contentType : contentType,
+          success : function(response, status, xhr) {
+            var response;
+            if (dataType != "json")
+              response = $.parseJSON(response);
+            if (status != "success")
+              alert("未知错误");
+            else if (response['code'] != 0)
+              alert("错误"+response['code']+"："+response['msg']);
+            else successFunction(response);
+          },
+          error : function(xhr, error, exception) {
+              // handle the error.
+              alert(exception.toString());
+          }
+        });
+      }
+      function getCookie(cname)
+      {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+          var c = ca[i].trim();
+          if (c.indexOf(name) == 0)
+            return c.substring(name.length, c.length);
+        }
+        return "";
+      }
+      function getRequest() {
+        var url = window.location.search;
+        var theRequest = new Object();
+        if (url.indexOf("?") == 0) {
+          var str = url.substr(1);
+          strs = str.split("&");
+          // return strs[0].split("=")[1];
+          for (var i = 0; i < strs.length; i++)
+            theRequest[strs[i].split("=")[0]] = strs[i].split("=")[1];
+        }
+        return theRequest;
+      }
+      function get_class_info() {
+        var req = {clid: clid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/class.php", jsonStr, function showResponse(response) {
+          class_info = response.body;
+          if (type == "edit") {
+            if (hid == undefined)
+              return;
+            $("#update_or_submit").text("更新作业");
+            get_show_homework();
+          } else {
+            $("#update_or_submit").text("提交作业");
+            homework = {
+              type: "O",
+              name: "新建个人在线作业",
+              begin_t: getNowFormatDate(),
+              end_t: getNowFormatDate(),
+              hard_ddl: getNowFormatDate(),
+              score_face: 0,
+              score_weight: 0,
+              finish_number: 0
+            };
+            homework.homework = new Array();
+            questions = homework.homework;
+            showDescription(homework);
+          }
+        });
+      }
+      function get_show_homework() {
+        var req = {hid: hid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/homework/detail.php", jsonStr, function showResponse(response) {
+          homework = response.body;
+          showDescription(homework);
+          questions = response.body.homework;
+          questions.sort(function(a, b) { return a.qid > b.qid; });
+          show_questions();
+        });
+      }
+      function show_questions() {
+        $("#div_questions").empty();
+        var total_score = 0;
+        for (var i = 0; i < questions.length; i++) {
+          addQuestion(questions[i]);
+          total_score += parseInt(questions[i].score);
+        }
+        homework.score_face = total_score;
+        $("#hw_show_score_face").text(total_score);
+      }
+    </script>
+    <script>
+      function addQuestion(q) {
+        var html;
+        var qType;
+        var s;
+
+        switch (q.type) {
+        case '0': case 0: qType = "选择题"; break;
+        case '1': case 1: qType = "判断题"; break;
+        case '2': case 2: qType = "填空题"; break;
+        case '3': case 3: qType = "问答题"; break;
+        case '4': case 4: qType = "离线问题"; break;
+        }
+        if (q.type == '2' || q.type == 2) {
+          var reg=new RegExp("{block}","g")
+          s = q.describe.replace(reg, "______");
+        }
+        else
+          s = q.describe;
+        html  = '<div class="panel panel-default">';
+        html += '  <div class="panel-heading">';
+        html += '    <h3 class="panel-title">';
+        html += '      <strong>'+qType+'</strong> '+q.name+'（'+q.score+'分）';
+        html += '    </h3>';
+        html += '  </div>';
+        html += '  <div class="panel-body">';
+        html += '    <p class="text-info">'+s+'</p>';
+        // alert(q.type);
+        if (q.type == "0") {
+          html += '<p>A. '+q.choiceA+'</p>';
+          html += '<p>B. '+q.choiceB+'</p>';
+          html += '<p>C. '+q.choiceC+'</p>';
+          html += '<p>D. '+q.choiceD+'</p>';
+        }
+        html += '  </div>';
+        html += '  <div class="panel-footer" align="right">';
+        html += '      <b class="textherf" onclick="delete_question('+q.qid+')">';
+        html += '        <span class="glyphicon glyphicon-trash"/>删除';
+        html += '      </b>&nbsp;&nbsp;&nbsp;&nbsp;';
+        html += '    <b href="#modal-container-edit-question" data-toggle="modal" class="textherf" onclick="edit_question('+q.qid+')">';
+        html += '      <span class="glyphicon glyphicon-edit"/>编辑';
+        html += '    </b>';
+        html += '  </div>';
+        html += '</div>';
+        $("#div_questions").append(html);
+      }
+      function showDescription(hw) {
+        var color;
+        var typestr;
+        var strnow = getNowFormatDate();
+        if (strnow < hw.begin_t)
+          color = "330099";
+        else if (strnow < hw.end_t)
+          color = "99FF00";
+        else if (strnow < hw.hard_ddl)
+          color = "FF0000";
+        else
+          color = "666666";
+        switch (hw.type) {
+          case "O": typestr = "个人在线作业"; break;
+          case "F": typestr = "个人离线作业"; break;
+          case "G": typestr = "小组离线作业"; break;
+        }
+        $("#div_descripthon").empty();
+        html = '          <span class="glyphicon glyphicon-exclamation-sign" style="color:#'+color+'"/>'+hw.name;
+        $("#page-title").html(html);
+        html  = '<div class="col-md-12 column">';
+        html += '  <div class="panel panel-default">';
+        html += '    <div class="panel-heading">';
+        html += '      <h3 class="panel-title">';
+        html += '        <strong>作业概览</strong>';
+        html += '      </h3>';
+        html += '    </div>';
+        html += '    <div class="panel-body">';
+        html += '      <div class="col-md-12 column">';
+        html += '        <div class="col-md-7 col-sm-7 row">';
+        html += '          <p>起始时间：<b>'+hw.begin_t +'</b></p>';
+        html += '          <p>截止时间：<b>'+hw.end_t   +'</b></p>';
+        html += '          <p>终止时间：<b>'+hw.hard_ddl+'</b></p>';
+        html += '        </div>';
+        html += '        <div class="col-md-5 col-sm-5 row">';
+        html += '          <p>作业类型：'+typestr+'</p>';
+        html += '          <p>作业比重：卷面分值<b>'+hw.score_face+'</b>，占总评分<b>'+parseInt(hw.score_weight*100)+'</b>%</p>';
+        html += '          <p>完成人数：<b>'+hw.finish_number+'</b>/'+class_info.student_num+'</p>';
+        html += '        </div>';
+        html += '      </div>';
+        html += '    </div>';
+        html += '    <div class="panel-footer" align="right" >';
+        html += '    <b href="#modal-container-edit-description" data-toggle="modal" class="textherf" onclick="editDescripthon()">';
+        html += '      <span class="glyphicon glyphicon-edit"/>编辑';
+        html += '    </b>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+        $("#div_descripthon").append(html);
+      }
+      function getNowFormatDate() {
+        var date = new Date();
+        var seperator1 = "-";
+        var seperator2 = ":";
+        var month = date.getMonth() + 1;
+        var strDate = date.getDate();
+        if (month >= 1 && month <= 9) {
+          month = "0" + month;
+        }
+        if (strDate >= 0 && strDate <= 9) {
+          strDate = "0" + strDate;
+        }
+        var strHour = date.getHours();
+        var strMin = date.getMinutes();
+        var strSec = date.getSeconds();
+        if (strHour >= 0 && strHour <= 9)
+          strHour = "0" + strHour;
+        if (strMin >= 0 && strMin <= 9)
+          strMin = "0" + strMin;
+        if (strSec >= 0 && strSec <= 9)
+          strSec = "0" + strSec;
+        
+        var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate + " " + strHour + seperator2 + strMin + seperator2 + strSec;
+        return currentdate;
+      }
+      function stringToDatetime(str) {
+        return str.replace(" ", "T");
+      }
+      function datetimeToString(str) {
+        return str.replace("T", " ");
+      }
+      function modify_description_btn() {
+        var hwtype;
+        homework.name = $("#hw-name").val();
+        homework.begin_t = datetimeToString($("#hw_start_t").val());
+        homework.end_t = datetimeToString($("#hw_end_t").val());
+        homework.hard_ddl = datetimeToString($("#hw_hard_t").val());
+        if ($("#hwdestype_0").prop("checked")) hwtype = "O";
+        else if ($("#hwdestype_1").prop("checked")) hwtype = "F";
+        else hwtype = "G";
+        if (hwtype != homework.type) {
+          questions.length = 0;
+          homework.type = hwtype;
+          show_questions();
+        }
+        homework.score_weight = parseFloat($("#hw-weight").val())/100;
+        showDescription(homework);
+      }
+      function editDescripthon() {
+        $("#hw_start_t").val(stringToDatetime(homework.begin_t));
+        $("#hw_end_t").val(stringToDatetime(homework.end_t));
+        $("#hw_hard_t").val(stringToDatetime(homework.hard_ddl));
+        switch (homework.type) {
+        case "O": $("#hwdestype_0").prop("checked", true); break;
+        case "F": $("#hwdestype_1").prop("checked", true); break;
+        case "G": $("#hwdestype_2").prop("checked", true); break;
+        }
+        $("#hw-weight").val(parseInt(homework.score_weight*100)+"%");
+        $("#hw-name").val(homework.name);
+      }
+      function changeHWType(HWtype) {
+        $("#hwtype_"+HWtype).prop("checked", true);
+        if (HWtype == '0') {
+          $("#hw_q_type").css("display", "block");
+          $("#hw_hint").css("display", "none");
+          $("#choice_A").css("display", "block");
+          $("#choice_B").css("display", "block");
+          $("#choice_C").css("display", "block");
+          $("#choice_D").css("display", "block");
+          $("#answer_choice").css("display", "block");
+          $("#answer_tail").css("display", "none");
+          $("#hw-ans-A").prop("checked", true);
+        } else if (HWtype == '1') {
+          $("#hw_q_type").css("display", "block");
+          $("#hw_hint").css("display", "none");
+          $("#choice_A").css("display", "none");
+          $("#choice_B").css("display", "none");
+          $("#choice_C").css("display", "none");
+          $("#choice_D").css("display", "none");
+          $("#answer_choice").css("display", "none");
+          $("#answer_tail").css("display", "block");
+          $("#hw-ans-T").prop("checked", true);
+        } else if (HWtype == '2') {
+          $("#hw_q_type").css("display", "block");
+          $("#hw_hint").css("display", "block");
+          $("#choice_A").css("display", "none");
+          $("#choice_B").css("display", "none");
+          $("#choice_C").css("display", "none");
+          $("#choice_D").css("display", "none");
+          $("#answer_choice").css("display", "none");
+          $("#answer_tail").css("display", "none");
+        } else if (HWtype == '3') {
+          $("#hw_q_type").css("display", "block");
+          $("#hw_hint").css("display", "none");
+          $("#choice_A").css("display", "none");
+          $("#choice_B").css("display", "none");
+          $("#choice_C").css("display", "none");
+          $("#choice_D").css("display", "none");
+          $("#answer_choice").css("display", "none");
+          $("#answer_tail").css("display", "none");
+        } else {
+          $("#hw_q_type").css("display", "none");
+          $("#hw_hint").css("display", "none");
+          $("#choice_A").css("display", "none");
+          $("#choice_B").css("display", "none");
+          $("#choice_C").css("display", "none");
+          $("#choice_D").css("display", "none");
+          $("#answer_choice").css("display", "none");
+          $("#answer_tail").css("display", "none");
+        }
+      }
+      function emptyEmptyEditWindow() {
+        $("#hw-title").val("");
+        $("#hw-content").val("");
+        $("#hw-choice-A").val("");
+        $("#hw-choice-B").val("");
+        $("#hw-choice-C").val("");
+        $("#hw-choice-D").val("");
+        $("#hw-score").val("");
+        $("#hw-ans-A").prop("checked", true);
+        $("#hw-ans-T").prop("checked", true);
+      }
+      function fillBlank(q) {
+        $("#hw-title").val(q.name);
+        $("#hw-content").val(q.describe);
+        $("#hw-score").val(q.score);
+        if (q.type == '0') {
+          $("#hw-choice-A").val(q.choiceA);
+          $("#hw-choice-B").val(q.choiceB);
+          $("#hw-choice-C").val(q.choiceC);
+          $("#hw-choice-D").val(q.choiceD);
+          $("#hw-ans-"+q.answer).prop("checked", true);
+        } else if (q.type == '1') {
+          $("#hw-ans-"+q.answer).prop("checked", true);
+        }
+      }
+      function modify_question_btn() {
+        var cur = current_question;
+        current_question = -1;
+        modify_question(cur);
+      }
+      function change_data(i) {
+        questions[i] = {};
+        if (homework.type == "O") {
+        for (var j = '0'; j <= '3'; j++)
+          if ($("#hwtype_"+j).prop("checked")) {
+            questions[i].type = j;
+            break;
+          }
+        }
+        else
+          questions[i].type = 4;
+        questions[i].name = $("#hw-title").val();
+        questions[i].describe = $("#hw-content").val();
+        questions[i].score = $("#hw-score").val();
+
+        if (questions[i].type == '0' || questions[i].type == 0) {
+          questions[i].choiceA = $("#hw-choice-A").val();
+          questions[i].choiceB = $("#hw-choice-B").val();
+          questions[i].choiceC = $("#hw-choice-C").val();
+          questions[i].choiceD = $("#hw-choice-D").val();
+          if ($("#hw-ans-A").prop("checked"))
+            questions[i].answer = "A";
+          else if ($("#hw-ans-B").prop("checked"))
+            questions[i].answer = "B";
+          else if ($("#hw-ans-C").prop("checked"))
+            questions[i].answer = "C";
+          else
+            questions[i].answer = "D";
+        } else if (questions[i].type == "1") {
+          if ($("#hw-ans-T").prop("checked"))
+            questions[i].answer = "T";
+          else
+            questions[i].answer = "F";
+        }
+      }
+      function modify_question(qid) {
+        if (qid == -1) {
+          questions.push({});
+          change_data(questions.length-1);
+          show_questions();
+        }
+        for (var i = 0; i < questions.length; i++)
+          if (questions[i].qid == qid) {
+            change_data(i);
+            show_questions();
+            return;
+          }
+      }
+      function delete_question_btn() {
+        var cur = current_question;
+        current_question = -1;
+        delete_question(cur);
+      }
+      function delete_question(qid) {
+        for (var i = 0; i < questions.length; i++)
+          if (questions[i].qid == qid) {
+            questions.splice(i, 1);
+            show_questions();
+            return;
+          }
+      }
+      function edit_question(qid) {
+        current_question = qid;
+        $("#delete_btn").attr("disabled", false);
+        for (var i = 0; i < questions.length; i++)
+          if (questions[i].qid == qid) {
+            emptyEmptyEditWindow();
+            changeHWType(questions[i].type);
+            fillBlank(questions[i]);
+            break;
+          }
+      }
+      function add_question() {
+        current_question = -1;
+        $("#delete_btn").attr("disabled", true);
+        emptyEmptyEditWindow();
+        if (homework.type == "O")
+          changeHWType('0');
+        else
+          changeHWType('4');
+        $("#modify-hw").text("添加题目");
+      }
+      function submit_problem() {
+        for (var i = 0; i < questions.length; i++)
+          questions[i].qid = i+1;
+        // alert($.toJSON(homework));
+        if (type == "edit") {
+          homework.hid = hid;
+          // $("#showshow").text($.toJSON(homework));
+          postJSON('../teacher/homework/modify.php', $.toJSON(homework), function showResponse(response) {
+            alert("成功修改！");
+            self.location='class.html?clid='+clid;
+          });
+        } else {
+          homework.clid = clid;
+          postJSON('../teacher/homework/publish.php', $.toJSON(homework), function showResponse(response) {
+            alert("成功发布！");
+            self.location='class.html?clid='+clid;
+          });
+        }
+      }
+    </script>
+    <script>
+      $(document).ready(function(){
+        // initialize
+        var request = getRequest();
+        clid = request.clid;
+        type = request.type;
+        hid = request.hid;
+        if (clid == undefined || type == undefined)
+          return;
+        get_class_info();
+      });
+  	</script>
+  </head>
+  <body>
+    <h2 align="center" id="page-title">第一次个人作业</h2>
+
+<div class="container">
+  <div class="row clearfix" id="div_descripthon"></div>
+</div>
+
+<div class="container">
+  <div class="row clearfix">
+    <div class="col-md-12 column" id="div_questions"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="col-md-12 column">
+    <a href="#modal-container-edit-question" data-toggle="modal" role="button" class="btn btn-primary" onclick="add_question()">添加题目</a>
+    <a class="btn btn-primary col-md-offset-1" onclick="submit_problem()" id="update_or_submit">更新作业</a>
+    <div class="modal fade" id="modal-container-edit-question" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-hw">修改题目</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group" id="hw_q_type">
+                <label class="col-sm-2 control-label">题型</label>
+                <div class="col-sm-10">
+                  <label><input type="radio" name="hwtype" id="hwtype_0" onclick="changeHWType(0)" checked/>选择题</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtype" id="hwtype_1" onclick="changeHWType(1)"/>判断题</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtype" id="hwtype_2" onclick="changeHWType(2)"/>填空题</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtype" id="hwtype_3" onclick="changeHWType(3)"/>问答题</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">标题</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-title" /></div>
+              </div>
+              <div class="form-group" id="hw_hint">
+                <label class="col-sm-12" align="right"><small>*请在需要填空的位置用“{block}”（不包括引号）代替<small></label>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">内容</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-content"/></div>
+              </div>
+              <div class="form-group" id="choice_A">
+                <label class="col-sm-2 control-label">选项A</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-choice-A"/></div>
+              </div>
+              <div class="form-group" id="choice_B">
+                <label class="col-sm-2 control-label">选项B</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-choice-B"/></div>
+              </div> 
+              <div class="form-group" id="choice_C">
+                <label class="col-sm-2 control-label">选项C</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-choice-C"/></div>
+              </div>
+              <div class="form-group" id="choice_D">
+                <label class="col-sm-2 control-label">选项D</label>
+                <div class="col-sm-10"><input type="text" class="form-control" id="hw-choice-D"/></div>
+              </div> 
+              <div class="form-group" id="answer_choice">
+                <label class="col-sm-2 control-label">答案</label>
+                <div class="col-sm-10">
+                  <label><input type="radio" name="hwchoice" id="hw-ans-A"/>A</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwchoice" id="hw-ans-B"/>B</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwchoice" id="hw-ans-C"/>C</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwchoice" id="hw-ans-D"/>D</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+              <div class="form-group" id="answer_tail" style="display:none;">
+                <label class="col-sm-2 control-label">答案</label>
+                <div class="col-sm-10">
+                  <label><input type="radio" name="hwtail" id="hw-ans-T"/>T</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtail" id="hw-ans-F"/>F</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">分值</label>
+                <div class="col-sm-3"><input type="number" class="form-control" id="hw-score"/></div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" id="delete_btn" onclick="delete_question_btn()">删除</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="modify_question_btn()">提交</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-container-edit-description" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-description">修改概况</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">作业题目</label>
+                <div class="col-sm-8"><input type="text" class="form-control" id="hw-name"/></div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">作业类型</label>
+                <div class="col-sm-10">
+                  <label><input type="radio" name="hwtype" id="hwdestype_0" checked/>个人在线作业</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtype" id="hwdestype_1"/>个人离线作业</label>&nbsp;&nbsp;&nbsp;
+                  <label><input type="radio" name="hwtype" id="hwdestype_2"/>小组离线作业</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">开始时间</label>
+                <div class="col-sm-10">
+                  <input type="datetime-local" id="hw_start_t"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">截止时间</label>
+                <div class="col-sm-10">
+                  <input type="datetime-local" id="hw_end_t"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">终止时间</label>
+                <div class="col-sm-10">
+                  <input type="datetime-local" id="hw_hard_t"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">作业占比</label>
+                <div class="col-sm-3"><input type="text" class="form-control" id="hw-weight"/></div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="modify_description_btn()">提交</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<br/>
+  </body>
+</html>

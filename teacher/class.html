@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title id="html_title">教学辅助系统</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <!--添加 user-scalable=no 可以禁用其缩放（zooming）功能-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 可选的Bootstrap主题文件（一般不使用） -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="../js/jquery.json.js"></script>
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+      .textherf {cursor: pointer;}
+    </style>
+    <script>
+      function postJSON(url, jsonStr, successFunction, async=true, dataType="json", contentType="application/text") {
+        $.ajax({
+          url : url,
+          type : 'POST',
+          async : async,
+          data : jsonStr,
+          processData : false,
+          dataType : dataType,
+          contentType : contentType,
+          success : function(response, status, xhr) {
+            if (dataType != "json")
+              response = $.parseJSON(response);
+            if (status != "success")
+              alert("未知错误");
+            else if (response['code'] != 0)
+              alert("错误"+response['code']+"："+response['msg']);
+            else successFunction(response);
+          },
+          error : function(xhr, error, exception) {
+              // handle the error.
+              alert(exception.toString());
+          }
+        });
+      }
+      function getCookie(cname)
+      {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+          var c = ca[i].trim();
+          if (c.indexOf(name) == 0)
+            return c.substring(name.length, c.length);
+        }
+        return "";
+      }
+      function getRequest() {
+        var url = window.location.search;
+        var theRequest = new Object();
+        if (url.indexOf("?") == 0) {
+          var str = url.substr(1);
+          strs = str.split("&");
+          // return strs[0].split("=")[1];
+          for (var i = 0; i < strs.length; i++)
+            theRequest[strs[i].split("=")[0]] = strs[0].split("=")[1];
+        }
+        return theRequest;
+      }
+    </script>
+    <script>
+      function addTA(TA) {
+        var html = "";
+        html += "<tr>";
+        html += "  <td>"+TA.username+"</td>";
+        html += "  <td class='textherf' onclick='modify_TA_btn("+TA.taid+")' data-toggle='modal' href='#modal-container-modify-ta'>编辑</td>";
+        html += "  <td class='textherf' onclick='delete_TA_btn("+TA.taid+")'>删除</td>";
+        html += "</tr>";
+        $("#ta-table-body").append(html);
+      }
+      function modify_TA_btn(taid) {
+        for (var i = 0; i < TAs.length; i++)
+          if (TAs[i].taid == taid) {
+            current_taid = taid;
+            $("#modal-username-show").text(TAs[i].username);
+            $("#modal-password-input").val("");
+            return;
+          }
+      }
+      function delete_TA_btn(taid) {
+        for (var i = 0; i < TAs.length; i++)
+          if (TAs[i].taid == taid) {
+            if (confirm("是否确认删除 "+TAs[i].username+" ？")) {
+              var req = {taid: taid};
+              var jsonStr = $.toJSON(req);
+              postJSON("../course/ta/delete.php", jsonStr, function showResponse(request) {
+                get_show_TAs();
+              });
+            }
+            return;
+          }
+      }
+      function add_ta_ok_btn() {
+        if ($("#add-modal-password-input").val() == "") {
+          alert("密码不能为空");
+          return;
+        }
+        if ($("#add-modal-username-input").val() == "") {
+          alert("账号不能为空");
+          return;
+        }
+        var req = {clid: clid, username: $("#add-modal-username-input").val(), password: $("#add-modal-password-input").val()};
+        $("#add-modal-password-input").val("");
+        $("#add-modal-username-input").val("");
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/ta/addTA.php", jsonStr, function showResponse(request) {
+          get_show_TAs();
+        });
+      }
+      function modify_ta_ok_btn() {
+        if ($("#modal-password-input").val() == "") {
+          alert("密码不能为空");
+          return;
+        }
+        var req = {taid: current_taid, password: $("#modal-password-input").val()};
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/ta/modify.php", jsonStr, function showResponse(request) {});
+      }
+      function get_show_TAs() {
+        var req = {clid: clid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/ta/list.php", jsonStr, function showResponse(request) {
+          TAs = request.body.info;
+          $("#ta-table-body").empty();
+          for (var i = 0; i < TAs.length; i++)
+            addTA(TAs[i]);
+        });
+      }
+      function show_pmt(key, value, chinese) {
+        var pmt_ok = '<span class="glyphicon glyphicon-ok-sign" style="color:#40FF40"></span>允许'+chinese;
+        var pmt_no = '<span class="glyphicon glyphicon-minus-sign" style="color:#FF0000"></span>不允许'+chinese;
+        if (value == 0) 
+          $("#"+key).html(pmt_no); 
+        else 
+          $("#"+key).html(pmt_ok);
+      }
+      function get_show_TAPmts() {
+        var req = {clid: clid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/ta/getPermission.php", jsonStr, function showResponse(request) {
+          TAPmts = request.body;
+          show_pmt("p_ma_upload", TAPmts.p_ma_upload, "上传");
+          show_pmt("p_ma_modify", TAPmts.p_ma_modify, "修改");
+          show_pmt("p_ma_delete", TAPmts.p_ma_delete, "删除");
+          show_pmt("p_hw_deliver", TAPmts.p_hw_deliver, "发布");
+          show_pmt("p_hw_modify", TAPmts.p_hw_modify, "修改");
+          show_pmt("p_hw_review", TAPmts.p_hw_review, "批改");
+          show_pmt("p_BBS_reply", TAPmts.p_BBS_reply, "论坛回复");
+          show_pmt("p_nt_deliver", TAPmts.p_nt_deliver, "发布");
+          show_pmt("p_nt_modify", TAPmts.p_nt_modify, "修改");
+          show_pmt("p_nt_delete", TAPmts.p_nt_delete, "删除");
+          show_pmt("p_ta_info", TAPmts.p_ta_info, "修改信息");
+        });
+      }
+      function change_chk_state(key, value) {
+        $("#"+key+"-chk").prop("checked", value == 1);
+      }
+      function edit_pmts_btn() {
+        change_chk_state("p_ma_upload", TAPmts.p_ma_upload);
+        change_chk_state("p_ma_modify", TAPmts.p_ma_modify);
+        change_chk_state("p_ma_delete", TAPmts.p_ma_delete);
+        change_chk_state("p_hw_deliver", TAPmts.p_hw_deliver);
+        change_chk_state("p_hw_modify", TAPmts.p_hw_modify);
+        change_chk_state("p_hw_review", TAPmts.p_hw_review);
+        change_chk_state("p_BBS_reply", TAPmts.p_BBS_reply);
+        change_chk_state("p_nt_deliver", TAPmts.p_nt_deliver);
+        change_chk_state("p_nt_modify", TAPmts.p_nt_modify);
+        change_chk_state("p_nt_delete", TAPmts.p_nt_delete);
+        change_chk_state("p_ta_info", TAPmts.p_ta_info);
+      }
+      function edit_ta_pmt_ok_btn() {
+        var req = {clid: clid};
+        req.p_ma_upload = $("#p_ma_upload-chk").is(":checked") ? 1 : 0;
+        req.p_ma_modify = $("#p_ma_modify-chk").is(":checked") ? 1 : 0;
+        req.p_ma_delete = $("#p_ma_delete-chk").is(":checked") ? 1 : 0;
+        req.p_hw_deliver = $("#p_hw_deliver-chk").is(":checked") ? 1 : 0;
+        req.p_hw_modify = $("#p_hw_modify-chk").is(":checked") ? 1 : 0;
+        req.p_hw_review = $("#p_hw_review-chk").is(":checked") ? 1 : 0;
+        req.p_BBS_reply = $("#p_BBS_reply-chk").is(":checked") ? 1 : 0;
+        req.p_nt_deliver = $("#p_nt_deliver-chk").is(":checked") ? 1 : 0;
+        req.p_nt_modify = $("#p_nt_modify-chk").is(":checked") ? 1 : 0;
+        req.p_nt_delete = $("#p_nt_delete-chk").is(":checked") ? 1 : 0;
+        req.p_ta_info = $("#p_ta_info-chk").is(":checked") ? 1 : 0;
+        var jsonStr = $.toJSON(req);
+        postJSON("../course/ta/modifyPermission.php", jsonStr, function showResponse(request) {
+          get_show_TAPmts();
+        });
+      }
+      function addHomework(hw) {
+        var color;
+        var typeStr;
+        switch (hw.timetype) {
+          case 0: color = "330099"; break;
+          case 1: color = "99FF00"; break;
+          case 2: color = "FF0000"; break;
+          case 3: color = "666666"; break;
+        }
+        switch (hw.type) {
+          case "O": typeStr = "个人在线作业"; break;
+          case "F": typeStr = "个人离线作业"; break;
+          case "G": typeStr = "小组离线作业"; break;
+        }
+        html  = '<div class="col-md-12 column">';
+        html += '  <div class="panel panel-default">';
+        html += '    <div class="panel-heading">';
+        html += '      <h3 class="panel-title">';
+        html += '        <strong>';
+        html += '          <span class="glyphicon glyphicon-exclamation-sign" style="color:#'+color+'"/>';
+        html += '          '+hw.name;
+        html += '        </strong>';
+        html += '      </h3>';
+        html += '    </div>';
+        html += '    <div class="panel-body">';
+        html += '      <div class="col-md-12 column">';
+        html += '        <div class="col-md-7 col-sm-7 row">';
+        html += '          <p>起始时间：'+hw.begin_t +'</p>';
+        html += '          <p>截止时间：'+hw.end_t   +'</p>';
+        html += '          <p>终止时间：'+hw.hard_ddl+'</p>';
+        html += '        </div>';
+        html += '        <div class="col-md-5 col-sm-5 row">';
+        html += '          <p>作业类型：'+typeStr+'</p>';
+        html += '          <p>作业比重：卷面分值<b>'+hw.score_face+'</b>，占总评分<b>'+parseInt(hw.score_weight*100)+'</b>分</p>';
+        html += '          <p>完成人数：<b>'+hw.finish_number+'</b>/'+class_info.student_num+'</p>';
+        html += '        </div>';
+        html += '      </div>';
+        html += '    </div>';
+        html += '    <div class="panel-footer" align="right" >';
+        if ((getCookie("type") == "TA" && pmts.p_hw_review == 1) || getCookie("type") == "teacher") {
+          html += '      <b class="textherf" onclick="check_homework('+hw.hid+')">';
+          html += '        <span class="glyphicon glyphicon-check"/>批改作业';
+          html += '      </b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';  
+        }
+        if ((getCookie("type") == "TA" && pmts.p_hw_modify == 1) || getCookie("type") == "teacher") {
+          html += '      <b class="textherf" onclick="delete_homework('+hw.hid+')">';
+          html += '        <span class="glyphicon glyphicon-trash"/>删除作业';
+          html += '      </b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+          html += '      <b class="textherf" onclick="edit_homework('+hw.hid+')">';
+          html += '        <span class="glyphicon glyphicon-edit"/>编辑作业';
+          html += '      </b>';
+        }
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+        $("#div_hw").append(html);
+      }
+      function get_show_homework() {
+        var req = {clid: clid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/homework/list.php", jsonStr, function showResponse(response) {
+          $("#div_hw").empty();
+          homeworks = response.body.info;
+          for (var i = 0; i < homeworks.length; i++)
+            addHomework(homeworks[i]);
+        });
+      }
+      function get_class_info() {
+        var html;
+        var req = {clid: clid};
+        var jsonStr = $.toJSON(req);
+        postJSON("../teacher/class.php", jsonStr, function showResponse(response) {
+          class_info = response.body;
+          html = '<a href="../teacher/course.html?coid='+class_info.coid+'">'+class_info.coname+'</a>';
+          $("#current_course").html(html);
+        });
+      }
+      function publish_homework() {
+        window.open("homework.html?clid="+clid+"&type=publish");
+      }
+      function check_homework(hid) {
+        window.open("check.html?hid="+hid);
+      }
+      function delete_homework(hid) {
+        var req = {hid: hid};
+        var jsonStr = $.toJSON(req);
+        if (!confirm("是否确认删除作业？"))
+          return;
+        postJSON("../teacher/homework/delete.php", jsonStr, function showResponse(response) {
+          get_show_homework();
+        });
+      }
+      function edit_homework(hid) {
+        window.open("homework.html?clid="+clid+"&type=edit&hid="+hid);
+      }
+      function get_show_tapmt() {
+        postJSON("../course/ta/getPermissionByTA.php", "{}", function showResponse(response) {
+          pmts = response.body;
+          $("#edit_ta_pmt_ok_btn").attr("disabled", true);
+          if (pmts.p_hw_deliver == 0)
+            $("#publish_homework_btn").attr("disabled", true);
+        });
+      }
+    </script>
+    <script>
+      $(document).ready(function(){
+        //initialize
+        var request = getRequest();
+        clid = request.clid;
+        if (clid == undefined)
+          return;
+        if (getCookie("type") == "TA") {
+          $("#my_ta").css("display", "none");
+          $("#panel-element-ta").css("display", "none");
+          get_show_tapmt();
+        }
+        else
+          get_show_TAs();
+        get_class_info();
+        get_show_homework();
+
+        get_show_TAPmts();
+      });
+  	</script>
+  </head>
+  <body>
+    <!-- top-bar -->
+    <div class="container" id="div_bar">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+              </button> 
+              <a class="navbar-brand" href="teacher-center.html">首页<span class="glyphicon glyphicon-home"/></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                <li><a href="../common/infoModify/teacher_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- path-bar -->
+    <div class="container">
+      <div class="row clearfix">
+        <div class="col-md-12 column">
+          <ul class="breadcrumb">
+            <li>
+               <a href="../teacher/teacher-center.html">首页</a>
+            </li>
+            <li class="active" id="current_course"></li>
+            <li class="active" id="current_class">班级首页</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- homework -->
+    <div class="container">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-hw">课程作业</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-hw" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container">
+          <!-- <blockquote><h3>课程作业</h3></blockquote> -->
+          <button class="btn btn-primary btn-block" onclick="publish_homework()" id="publish_homework_btn">发布新作业</button><br/>
+          <div class="row clearfix" id="div_hw"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- teacher assistant -->
+    <div class="container" id="my_ta">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-ta">我的助教</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-ta" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container">
+          <!-- <blockquote><h3>我的助教</h3></blockquote> -->
+          <div class="row clearfix">
+            <div class="col-md-12 column">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>账号</th>
+                    <th>编辑</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+                <tbody id="ta-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <a class="pull-right btn btn-primary" data-toggle="modal" href="#modal-container-add-ta">添加助教</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ta permission -->
+    <div class="container">
+      <div class="panel-heading">
+        <span class="glyphicon glyphicon-chevron-right" style="color:#337AB7"/>
+        <!-- <blockquote> -->
+          <a class="panel-title" data-toggle="collapse" data-parent="#panel-355058" href="#panel-element-pmt">助教权限</a>
+        <!-- </blockquote> -->
+      </div>
+    </div>
+    <div id="panel-element-pmt" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="container">
+          <!-- <blockquote><h3>助教权限</h3></blockquote> -->
+          <div class="row clearfix">
+            <div class="col-md-12 column">
+
+              <div class="col-md-3">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">
+                      课程资源
+                    </h3>
+                  </div>
+                  <div class="panel-body">
+                    <p id="p_ma_upload"></p>
+                    <p id="p_ma_modify"></p>
+                    <p id="p_ma_delete"></p>
+                  </div>
+                  <div class="panel-footer textherf" align="right" data-toggle="modal" href="#modal-container-edit-ta-pmt" onclick="edit_pmts_btn()">
+                    编辑
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">
+                      课程通知
+                    </h3>
+                  </div>
+                  <div class="panel-body">
+                    <p id="p_nt_deliver"></p>
+                    <p id="p_nt_modify"></p>
+                    <p id="p_nt_delete"></p>
+                  </div>
+                  <div class="panel-footer textherf" align="right" data-toggle="modal" href="#modal-container-edit-ta-pmt" onclick="edit_pmts_btn()">
+                    编辑
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">
+                      作业
+                    </h3>
+                  </div>
+                  <div class="panel-body">
+                    <p id="p_hw_deliver"></p>
+                    <p id="p_hw_modify"></p>
+                    <p id="p_hw_review"></p>
+                  </div>
+                  <div class="panel-footer textherf" align="right" data-toggle="modal" href="#modal-container-edit-ta-pmt" onclick="edit_pmts_btn()">
+                    编辑
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">
+                      其他
+                    </h3>
+                  </div>
+                  <div class="panel-body">
+                    <p id="p_BBS_reply"></p>
+                    <p id="p_ta_info"></p>
+                  </div>
+                  <div class="panel-footer textherf" align="right" data-toggle="modal" href="#modal-container-edit-ta-pmt" onclick="edit_pmts_btn()">
+                    编辑
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+    <div class="modal fade" id="modal-container-modify-ta" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">编辑助教</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">账号</label>
+                <div class="col-sm-10" id="modal-username-show"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">密码</label>
+                <div class="col-sm-4"><input type="password" class="form-control" id="modal-password-input"/></div>
+              </div> 
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="modify_ta_ok_btn()">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-container-add-ta" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">添加助教</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">账号</label>
+                <div class="col-sm-4"><input type="text" class="form-control" id="add-modal-username-input"/></div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">密码</label>
+                <div class="col-sm-4"><input type="password" class="form-control" id="add-modal-password-input"/></div>
+              </div> 
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="add_ta_ok_btn()">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-container-edit-ta-pmt" role="dialog" aria-labelledby="modify-block" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              <h4 class="modal-title" id="modify-block">编辑权限</h4>
+          </div>
+          <div class="modal-body">
+            <form class="form-horizontal" role="form">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">课程资源</label>
+                <div class="col-sm-10">
+                    <label><input type="checkbox" id="p_ma_upload-chk"/>上传</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_ma_modify-chk"/>修改</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_ma_delete-chk"/>删除</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">课程通知</label>
+                <div class="col-sm-10">
+                    <label><input type="checkbox" id="p_nt_deliver-chk"/>发布</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_nt_modify-chk"/>修改</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_nt_delete-chk"/>删除</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">作业</label>
+                <div class="col-sm-10">
+                    <label><input type="checkbox" id="p_hw_deliver-chk"/>发布</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_hw_modify-chk"/>修改</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_hw_review-chk"/>批改</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="col-sm-2 control-label">其他</label>
+                <div class="col-sm-10">
+                    <label><input type="checkbox" id="p_BBS_reply-chk"/>论坛回复</label>&nbsp;&nbsp;&nbsp;
+                    <label><input type="checkbox" id="p_ta_info-chk"/>修改信息</label>&nbsp;&nbsp;&nbsp;
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="edit_ta_pmt_ok_btn()" id="edit_ta_pmt_ok_btn">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>

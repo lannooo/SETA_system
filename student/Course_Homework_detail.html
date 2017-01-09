@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>学生子系统</title>
+    <style>
+        .dll{ width:200px; height:170px; float:left;}
+        .dl2{ width:200px; height:150px; float:left;}
+    </style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../css/sticky-footer-navbar.css" rel="stylesheet">
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap-theme.min.css"></script>
+    <script src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <script lang="javascript">
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+        var clid = getQueryString('clid');
+        var hid = getQueryString('hid');
+        var type_int = getQueryString('type');
+    </script>
+
+    <script>
+        $(document).ready(function(){
+            $.ajax({
+                url:'Course_Homework_detail.php',
+                type:'GET', //GET
+                async:true,    //或false,是否异步
+                data:{
+                    hid: hid
+                },
+                timeout:5000,    //超时时间
+                dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                beforeSend:function(xhr){
+                },
+                success:function(data,textStatus,jqXHR){
+                    if(data == "fail_no_homework")
+                        alert("不存在该作业!");
+                    else if(data == "fail_no_connection" || data == "fail_select_error" || data == "fail_no_file")
+                        alert("发生未知错误!");
+                    else if(data == "fail_no_user")
+                        alert("没有登陆的学生！");
+                    else{
+                        var questionBlock = createQuestionBlock(data);
+                        document.getElementById("questionList").innerHTML = questionBlock;
+                        if(ifcorrected == 1){
+                            for(var i=0;i<count;i++) {
+                                var obj = document.getElementsByName(nameArray[i].name);
+                                for (var j=0; j < obj.length; j++) {
+                                    obj[j].disabled = true;
+                                }
+                            }
+                        }
+                    }
+                },
+                error:function(xhr,textStatus){
+                    alert("No connect to database!");
+                },
+                complete:function(){
+                }
+            });
+            $("#submitButton").click(function(){
+                if(type_int == 1){
+                    var answer_arr = uploadAnswer();
+                    $.ajax({
+                        url: 'Course_Homework_uploadOnline.php',
+                        type:'POST', //GET
+                        async:true,    //或false,是否异步
+                        data:{
+                            hid: hid,
+                            answer: answer_arr
+                        },
+                        timeout:5000,    //超时时间
+                        dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                        beforeSend:function(xhr){
+                        },
+                        success:function(data,textStatus,jqXHR){
+                            if(data == "success") {
+                                alert("提交成功！");
+                                window.reload();
+                            }
+                            else alert("提交失败！");
+                        },
+                        error:function(xhr,textStatus){
+                            alert("提交失败!");
+                        },
+                        complete:function(){
+                        }
+                    });
+                }
+                else {
+                    var formData = new FormData($('#uploadForm')[0]);
+                    formData.append("hid", hid);
+                    formData.append("type_int", type_int);
+                    $.ajax({
+                        url: 'Course_Homework_uploadOffline.php',
+                        type:'POST', //GET
+                        async:true,    //或false,是否异步
+                        data: formData,
+                        cache: false,
+                        processData: false,
+                        contentType: false,
+                        timeout:5000,    //超时时间
+                        dataType:'text',    //返回的数据格式：json/xml/html/script/jsonp/text
+                        beforeSend:function(xhr){
+                        },
+                        success:function(data,textStatus,jqXHR){
+                            if(data == "success") {
+                                alert("提交成功！");
+                                window.reload();
+                            }
+                            else alert("提交失败！");
+                        },
+                        error:function(xhr,textStatus){
+                            alert("提交失败!");
+                        },
+                        complete:function(){
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script language="javascript">
+        var nameArray = new Array();
+        var count = 0;
+        var ifcorrected = 0;
+        function compareTime(startTime,endTime) {
+            var startTimes = startTime.substring(0, 10).split('-');
+            var endTimes = endTime.substring(0, 10).split('-');
+            startTime = startTimes[1] + '-' + startTimes[2] + '-' + startTimes[0] + ' ' + startTime.substring(10, 19);
+            endTime = endTimes[1] + '-' + endTimes[2] + '-' + endTimes[0] + ' ' + endTime.substring(10, 19);
+            var thisResult = (Date.parse(endTime) - Date.parse(startTime)) / 3600 / 1000;
+            if (thisResult < 0) {
+                return false;
+            } else if (thisResult >= 0) {
+                return true;
+            }
+        }
+        function getNowFormatDate() {
+            var date = new Date();
+            var seperator1 = "-";
+            var seperator2 = ":";
+            var month = date.getMonth() + 1;
+            var strDate = date.getDate();
+            if (month >= 1 && month <= 9) {
+                month = "0" + month;
+            }
+            if (strDate >= 0 && strDate <= 9) {
+                strDate = "0" + strDate;
+            }
+            var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate
+                    + " " + date.getHours() + seperator2 + date.getMinutes()
+                    + seperator2 + date.getSeconds();
+            return currentdate;
+        }
+        function createQuestionBlock(data){
+            var hw = eval('(' + data.split("&&&")[0] + ')');
+            var questionBlock = "";
+            if(hw.result != null && hw.result.ifcorrected == 1) {
+                document.getElementById("submitButton").disabled = true;
+                document.getElementById("submitButton").innerHTML = "作业已批改无法提交";
+                ifcorrected = hw.result.ifcorrected;
+            }
+            else {
+                if(compareTime(getNowFormatDate(),hw.hard_ddl) == false){
+                    document.getElementById("submitButton").disabled = true;
+                    document.getElementById("submitButton").innerHTML = "超过终止时间无法提交";
+                }
+            }
+            if(hw.ismember == 1 && hw.type == 'G'){
+                document.getElementById("submitButton").disabled = true;
+                document.getElementById("submitButton").innerHTML = "只有小组组长能够提交";
+            }
+            var question = eval('(' + data.split("&&&")[1] + ')');
+            var typeString, resultString;
+            if(hw.type == 'F'){
+                typeString = "个人离线作业";
+            }
+            else if(hw.type == 'O'){
+                typeString = "个人在线作业";
+            }
+            else if(hw.type == 'G'){
+                typeString = "小组作业";
+            }
+            if(hw.result == null) {
+                resultString = "未完成";
+            }
+            else if(0 == hw.result.ifcorrected){
+                resultString = "未批改";
+            }
+            else {
+                resultString = "已批改";
+            }
+            //$("#describe").append()
+
+            $("#hwhead").text(hw.name);
+            $("#describe").append("</br>");
+            $("#describe").append("<p><strong>开始时间：</strong>"+hw.begin_t+"&nbsp;&nbsp;&nbsp;&nbsp;"+"<strong>作业类型：</strong>"+typeString+"</p>");
+            $("#describe").append("<p><strong>截止时间：</strong>"+hw.end_t+"&nbsp;&nbsp;&nbsp;&nbsp;"+"<strong>作业比重：</strong>"+"卷面分值"+hw.score_face+" 占总评分"+parseInt(hw.score_weight*100)+"分"+"</p>");
+            $("#describe").append("<p><strong>终止时间：</strong>"+hw.hard_ddl+"&nbsp;&nbsp;&nbsp;&nbsp;"+"<strong>作业状态：</strong>"+resultString+"</p>");
+
+            if(hw.result!=null){
+                var html = "";
+                html="<p><strong>提交时间：</strong>"+hw.result.uploadtime+"&nbsp;&nbsp;&nbsp;&nbsp;";
+                if(1 == hw.result.ifcorrected){
+                    html+="<strong>作业得分：</strong>"+hw.result.score+"</p>";
+                    html+="<p><strong>作业点评：</strong></p>";
+                    html+="<p>"+hw.result.comment;
+                }
+                html+="</p>";
+                $("#describe").append(html);
+            }
+
+            questionBlock = questionBlock + questionString(question, hw.type);
+
+            return questionBlock;
+        }
+        function questionString(question, type){
+            var string = "", j;
+            if(type == 'F') {
+                string = string +
+                        "<div class='panel panel-default'>" +
+                        "<div class='panel-heading'> " +
+                        "<h3 class='panel-title'>" + question.name + "</h3> " + "</div> " +
+                        "<div class='panel-body'>" +
+                        "<p>" + question.describe +"</p></div>" +
+                        "<div class='panel-body'>" +
+                        "<form name='uploadForm' id='uploadForm' enctype='multipart/form-data'> " +
+                        "<label for='file'>Filename:</label>" +
+                        "<input type='file' name='file' id='file' /> </form> " +
+                        "</div>";
+            }
+            else if(type == 'G'){
+                string = string +
+                        "<div class='panel panel-default'>" +
+                        "<div class='panel-heading'> " +
+                        "<h3 class='panel-title'>" + question.name + "</h3> " + "</div> " +
+                        "<div class='panel-body'>" +
+                        "<p>" + question.describe +"</p></div>" +
+                        "<div class='panel-body'>" +
+                        "<form name='uploadForm' id='uploadForm' enctype='multipart/form-data'> " +
+                        "<label for='file'>Filename:</label>" +
+                        "<input type='file' name='file' id='file' /> </form> " +
+                        "</div>";
+            }
+            else if(type == 'O'){
+                for(var i = 0;i < question.length;i++){
+                    switch (question[i].type){
+                        case '0':
+                            string = string +
+                                    "<div class='panel panel-default'>" +
+                                    "<div class='panel-heading'> " +
+                                    "<h3 class='panel-title'>" + question[i].name + "</h3> " + "</div> " +
+                                    "<div class='panel-body'>" +
+                                    "<p>" + question[i].describe +"</p>";
+                            if(question[i].answer == 'A')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='A' checked/>" + question[i].choice_A + "</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='A' />" + question[i].choice_A + "</label>" +
+                                    "</div> ";
+                            if(question[i].answer == 'B')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='B' checked/>" + question[i].choice_B + "</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='B' />" + question[i].choice_B + "</label>" +
+                                    "</div> ";
+                            if(question[i].answer == 'C')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='C' checked/>" + question[i].choice_C + "</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='C' />" + question[i].choice_C + "</label>" +
+                                    "</div> ";
+                            if(question[i].answer == 'D')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='D' checked/>" + question[i].choice_D + "</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='D' />" + question[i].choice_D + "</label>" +
+                                    "</div> ";
+                            if(question[i].ans_score != null){
+                                string = string +"</div> " +
+                                        "<div class='panel-footer'>" + "分数：" + question[i].score + "&nbsp;&nbsp;得分：" + question[i].ans_score + "</div>" + "</div>";
+
+                            }
+                            else string = string +"</div> " +
+                                    "<div class='panel-footer'>" + "分数：" + question[i].score + "</div>" + "</div>";
+                            break;
+                        case '1':
+                            string = string +
+                                    "<div class='panel panel-default'>" +
+                                    "<div class='panel-heading'> " +
+                                    "<h3 class='panel-title'>" + question[i].name + "</h3> " + "</div> " +
+                                    "<div class='panel-body'>" +
+                                    "<p>" + question[i].describe +"</p>";
+                            if(question[i].answer == 'T')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='T' checked/>True</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='T' />True</label>" +
+                                    "</div> ";
+                            if(question[i].answer == 'F')
+                                string = string +
+                                        "<div class='col-xs-3'> " +
+                                        "<label><input name='" + question[i].qid + "' type='radio' value='T' checked/>False</label>" +
+                                        "</div> ";
+                            else string = string +
+                                    "<div class='col-xs-3'> " +
+                                    "<label><input name='" + question[i].qid + "' type='radio' value='T' />False</label>" +
+                                    "</div> ";
+                                if(question[i].ans_score != null){
+                                    string = string +"</div> " +
+                                            "<div class='panel-footer'>" + "分数：" + question[i].score + "&nbsp;&nbsp;得分：" + question[i].ans_score + "</div>" + "</div>";
+                                }
+                            else string = string +"</div> " +
+                                    "<div class='panel-footer'>" + "分数：" + question[i].score + "</div>" + "</div>";
+                            break;
+                        case '2':
+                            var array = question[i].describe.split("{block}");
+                            var answer_array = null;
+                            if(question[i].answer != null)
+                                answer_array = question[i].answer.split("|||");
+                            var describe = array[0];
+                            for(j = 1;j < array.length;j++){
+                                describe = describe + "<textarea name='" + question[i].qid + "' style='width:200px;height:20px;'>";
+                                if(null != answer_array && null != answer_array[j - 1])
+                                    describe = describe + answer_array[j - 1];
+                                describe = describe + "</textarea>" + array[j];
+                            }
+                            string = string +
+                                    "<div class='panel panel-default'>" +
+                                    "<div class='panel-heading'> " +
+                                    "<h3 class='panel-title'>" + question[i].name + "</h3> " + "</div> " +
+                                    "<div class='panel-body'>" +
+                                    "<p>" + describe +"</p>" +
+                                    "</div> ";
+                            if(question[i].ans_score != null){
+                                string = string +
+                                        "<div class='panel-footer'>" + "分数：" + question[i].score + "&nbsp;&nbsp;得分：" + question[i].ans_score + "</div>" + "</div>";
+                            }
+                            else string = string +
+                                    "<div class='panel-footer'>" + "分数：" + question[i].score + "</div>" + "</div>";
+                            break;
+                        case '3':
+                            string = string +
+                                    "<div class='panel panel-default'>" +
+                                    "<div class='panel-heading'> " +
+                                    "<h3 class='panel-title'>" + question[i].name + "</h3> " + "</div> " +
+                                    "<div class='panel-body'>" +
+                                    "<p>" + question[i].describe +"</p>" +
+                                    "<textarea name='" + question[i].qid + "' style='width:200px;height:80px;'>";
+                            if(question[i].answer != null)
+                                string = string + question[i].answer;
+                            string = string +
+                                    "</textarea>" +
+                                    "</div> ";
+                            if(question[i].ans_score != null){
+                                string = string +
+                                        "<div class='panel-footer'>" + "分数：" + question[i].score + "&nbsp;&nbsp;得分：" + question[i].ans_score + "</div>" + "</div>";
+                            }
+                            else string = string +
+                                    "<div class='panel-footer'>" + "分数：" + question[i].score + "</div>" + "</div>";
+                            break;
+                    }
+                    nameArray[count] = new nameList(question[i].type, question[i].qid);
+                    count++;
+                }
+            }
+            //string = string + "<button class='btn btn-default' contenteditable='true' type='button' id='submitButton'>提交作业</button>";
+            return string;
+        }
+        function nameList(type, name) {
+            this.type = type;
+            this.name = name;
+        }
+        function Answer(qid, answer) {
+            this.qid = qid;
+            this.answer = answer;
+        }
+        function uploadAnswer(){
+            var arr = new Array();
+            var j, obj, empty = false;
+            for(var i = 0;i < count;i++){
+                obj = document.getElementsByName(nameArray[i].name);
+                switch(nameArray[i].type){
+                    case '0':
+                        for(j=0;j<4;j++){
+                            if(obj[j].checked){
+                                arr[i] = new Answer(nameArray[i].name, obj[j].value);
+                                break;
+                            }
+                        }
+                        if(j == 4) {
+                            arr[i] = new Answer(nameArray[i].name, null);
+                            empty = true;
+                        }
+                        break;
+                    case '1':
+                        for(j=0;j<2;j++){
+                            if(obj[j].checked){
+                                arr[i] = new Answer(nameArray[i].name, obj[j].value);
+                                break;
+                            }
+                        }
+                        if(j == 2) {
+                            arr[i] = new Answer(nameArray[i].name, null);
+                            empty = true;
+                        }
+                        break;
+                    case '2':
+                        var content = obj[0].value;
+                        for(j=1;j<obj.length;j++){
+                            if(obj[j].value == "" || obj[j].value == null){
+                                empty = true;
+                            }
+                            content = content + "|||" + obj[j].value;
+                        }
+                        arr[i] = new Answer(nameArray[i].name, content);
+                        break;
+                    case '3':
+                        if(obj[0].value == "" || obj[0].value == null){
+                            empty = true;
+                            arr[i] = new Answer(nameArray[i].name, null);
+                        }
+                        else arr[i] = new Answer(nameArray[i].name, obj[0].value);
+                        break;
+                }
+            }
+            if(empty)
+                alert("注意：尚有题目未作答！");
+            return arr;
+        }
+    </script>
+
+</head>
+<body>
+
+<div class="container" id="div_bar">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                    </button>
+                    <a class="navbar-brand btn" href="Course_list.html">首页<span class="glyphicon glyphicon-home"/></a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="../common/messageManagement/message_manage.html">私信<span class="glyphicon glyphicon-envelope"/></a></li>
+                        <li><a href="../BBS/login.php">论坛<span class="glyphicon glyphicon-comment"/></a></li>
+                        <li><a href="../common/infoModify/student_info_modify.html">个人中心<span class="glyphicon glyphicon-user"/></a></li>
+                        <li><a href="../logout/logout.php">登出<span class="glyphicon glyphicon-off"/></a></li>&nbsp;&nbsp;
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="jumbotron" id="describe">
+                <h1 id="hwhead">
+                </h1>
+            </div>
+        </div>
+    </div>
+    <div id = "questionList">
+    </div>
+    <button class="btn btn-default btn-block btn-info" type="button" id='submitButton'>提交作业</button>
+</div>
+
+<div class="footer">
+    <div class="container">
+        <div class="row footer-top">
+            <div class="col-md-6">
+                <h4>软件工程教学辅助系统</h4>
+                <p>
+                    开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
+                    <br/>
+                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="row about">
+                    <div class="col-md-6">
+                        <h4>课外学习</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://www.softwareengineerinsider.com/">Software Engineer Insider</a></li>
+                            <li><a href="http://www.tutorialspoint.com/cmmi/">SEI CMMI Tutorial</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>友情链接</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row footer-bottom">
+            <ul class="list-inline text-center">
+                <li>软件需求工程&软件工程管理[G01]</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>
