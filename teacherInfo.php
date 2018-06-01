@@ -214,7 +214,7 @@
                 <p>
                     开发完成于2016-12-31, 项目开源代码见<a href="https://github.com/lannooo/SETA_system">github</a>
                     <br/>
-                    成员组成: 王俊皓/边炜康/卢旭辉/张苏/刘奇煚
+                    成员组成: 王老菊/边边/校草/张*苏/679
                 </p>
             </div>
             <div class="col-md-6">
@@ -229,8 +229,8 @@
                     <div class="col-md-6">
                         <h4>友情链接</h4>
                         <ul class="list-unstyled">
-                            <li><a href="http://10.202.78.13/">浙江大学现代教务管理系统</a></li>
-                            <li><a href="http://cspo.zju.edu.cn/redir.php?catalog_id=2">计算机科学与技术学院办公网</a></li>
+                            <li><a href="http://172.0.0.1/">浙江大学现代教务管理系统</a></li>
+                            <li><a href="http://172.0.0.1">计算机科学与技术学院办公网</a></li>
                         </ul>
                     </div>
                 </div>
